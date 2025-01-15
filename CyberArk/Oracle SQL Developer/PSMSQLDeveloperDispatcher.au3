@@ -1,11 +1,11 @@
 ;=========================================================================================
 ;             SQL Developer Dispatcher
-;             ------------------------------
+;             ------------------------
 ; Description : PSM Dispatcher for Oracle SQL Developer
 ; Vendor : Oracle
 ; Product : SQL Developer
 ; Version : 23.1.1
-; Developed by: Abhishek Singh(FIL)
+; Developed by: Abhishek Singh
 ; IMP NOTE: This connector creates 'connections.json' file using 'ConnectionsTemplate.json'
 ;=========================================================================================
 #AutoIt3Wrapper_UseX64=n
