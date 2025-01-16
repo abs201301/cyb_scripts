@@ -51,7 +51,7 @@ Global $ConnectionClientPID = 0
 Exit Main()
 
 ;=======================================
-; Main
+; Main script starts here
 ;=======================================
 Func Main()
 
