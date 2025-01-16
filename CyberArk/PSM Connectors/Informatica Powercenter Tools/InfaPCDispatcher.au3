@@ -33,7 +33,7 @@ AutoItSetOption("MouseCoordMode", 0) ; Relative to active window
 ; Consts & Globals
 ;=======================================
 Global Const $DISPATCHER_NAME = "PSM Informatica PC Tools"
-Global Const $RepoEXE					= "<Path to your Informatica pmrep.exe>"
+Global Const $RepoEXE	= "<Path to your Informatica pmrep.exe>"
 Global Const $ERROR_MESSAGE_TITLE = "PSM " & $DISPATCHER_NAME & " Dispatcher error message"
 Global Const $LOG_MESSAGE_PREFIX = $DISPATCHER_NAME & " Dispatcher - "
 Global Const $_CTL_CHECK = "Check"
