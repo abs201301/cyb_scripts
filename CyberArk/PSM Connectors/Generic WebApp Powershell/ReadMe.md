@@ -5,17 +5,17 @@ The script handles login under local as well as domain based accounts. For addre
 
 Important paramaters that must be defined against PSM connection component
 
-Global $DISPATCHER_NAME ;Will be fetched from the PSM Session
-Global $PS_EXE ;Will be fetched from the PSM Session
-Global $Script_Path ;Will be fetched from the PSM Session
-Global $Script_Name ;Will be fetched from the PSM Session
-Global $TargetUsername ;Will be fetched from the PSM Session
-Global $TargetPassword ;Will be fetched from the PSM Session
-Global $TargetAddress ;Will be fetched from the PSM Session
-Global $TargetDomain ;Will be fetched from the PSM Session
-Global $RemoteMachine ;Will be fetched from the PSM Session
-Global $DriverPath ; Will be fetched from the PSM Session
-Global $BrowserPath ; Will be fetched from the PSM Session
+1. Global $DISPATCHER_NAME ;Will be fetched from the PSM Session
+2. Global $PS_EXE ;Will be fetched from the PSM Session
+3. Global $Script_Path ;Will be fetched from the PSM Session
+4. Global $Script_Name ;Will be fetched from the PSM Session
+5. Global $TargetUsername ;Will be fetched from the PSM Session
+6. Global $TargetPassword ;Will be fetched from the PSM Session
+7. Global $TargetAddress ;Will be fetched from the PSM Session
+8. Global $TargetDomain ;Will be fetched from the PSM Session
+9. Global $RemoteMachine ;Will be fetched from the PSM Session
+10. Global $DriverPath ; Will be fetched from the PSM Session
+11. Global $BrowserPath ; Will be fetched from the PSM Session
 
 ***PSM<"AppName">WebApp.ps1***
 This is meant to be application specific Powershell script. The intention of creating Powershell script is to handle web login for various websites in a particular technology stack
