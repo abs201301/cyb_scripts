@@ -17,5 +17,5 @@ Global $RemoteMachine ;Will be fetched from the PSM Session
 Global $DriverPath ; Will be fetched from the PSM Session
 Global $BrowserPath ; Will be fetched from the PSM Session
 
-** PSM<"AppName">WebApp.ps1 **
+***PSM<"AppName">WebApp.ps1***
 This is meant to be application specific Powershell script. The intention of creating Powershell script is to handle web login for various websites in a particular technology stack
