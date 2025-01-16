@@ -24,9 +24,9 @@ AutoItSetOption("SendKeyDelay", 30)
 ;=======================================
 ; Consts & Globals
 ;=======================================
-Global Const $DISPATCHER_NAME									= "IBM i ACS"
-Global Const $ERROR_MESSAGE_TITLE  								= "PSM " & $DISPATCHER_NAME & " Dispatcher error message"
-Global Const $LOG_MESSAGE_PREFIX 								= $DISPATCHER_NAME & " Dispatcher - "
+Global Const $DISPATCHER_NAME		= "IBM i ACS"
+Global Const $ERROR_MESSAGE_TITLE  	= "PSM " & $DISPATCHER_NAME & " Dispatcher error message"
+Global Const $LOG_MESSAGE_PREFIX 	= $DISPATCHER_NAME & " Dispatcher - "
 Global Const $MESSAGE_TITLE	= $DISPATCHER_NAME
 
 Global $CLIENT_EXECUTABLE
