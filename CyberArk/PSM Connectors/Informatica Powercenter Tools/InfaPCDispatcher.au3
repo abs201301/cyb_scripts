@@ -235,11 +235,11 @@ Func LaunchEXE()
     MessageUserOn($MESSAGE_TITLE, "Starting " & $DISPATCHER_NAME & @LF & "Please wait... Configuration setup (2/5)")
 	If ($Debug) Then
 		MessageUserOff()
-		ToolTip("pmrep.exe connect -r " & $Repository & " -n " & $TargetUsername & " -h " & $TargetAddress & " -o " & $TargetPort & " -s FIL_GenericAccounts")
+		ToolTip("pmrep.exe connect -r " & $Repository & " -n " & $TargetUsername & " -h " & $TargetAddress & " -o " & $TargetPort & " -s " & $SecureDomain)
 	EndIf
-	Local $RunCfg = $RepoEXE & " connect " & "-r " & $Repository & " -n " & $TargetUsername & " -x " & $TargetPassword & " -h " & $TargetAddress & " -o " & $TargetPort & " -s FIL_GenericAccounts"
+	Local $RunCfg = $RepoEXE & " connect " & "-r " & $Repository & " -n " & $TargetUsername & " -x " & $TargetPassword & " -h " & $TargetAddress & " -o " & $TargetPort & " -s " & $SecureDomain
 	RunWait($RunCfg,"",@SW_HIDE)
-	LogWrite("Configuring session: " & $RepoEXE & " connect " & "-r " & $Repository & " -n " & $TargetUsername & " -x  somepassword" & " -h " & $TargetAddress & " -o " & $TargetPort & " -s FIL_GenericAccounts")
+	LogWrite("Configuring session: " & $RepoEXE & " connect " & "-r " & $Repository & " -n " & $TargetUsername & " -x  somepassword" & " -h " & $TargetAddress & " -o " & $TargetPort & " -s " & $SecureDomain)
 	
 	MessageUserOff()
     MessageUserOn($MESSAGE_TITLE, "Starting " & $DISPATCHER_NAME & @LF & "Please wait... Configuration setup (3/5)")
@@ -326,7 +326,7 @@ Func PCToolsLogin()
 	EndIf
 	
 	$WinTitle = "Connect to Repository"
-	$WinText = "FIL_GenericAccounts"
+	$WinText = $SecureDomain
 	$WinTitle2 = "Designer"
 	$WinText2 = "OK"
 	$hMsg2 = WinWait($WinTitle2, $WinText2, 3)
@@ -409,7 +409,7 @@ EndFunc   ;==>FilePath
 
 ;==================================================================================================
 ; IsTrue($string) - return version message
-; Abhishek Singh (FIL)
+; Abhishek Singh
 ;
 ; Return TRUE if $string is True or some case insensitive text form of y/yes/true
 ; Otherwise return FALSE
