@@ -45,8 +45,8 @@ Exit Main()
 
 Func Main()
 
-	Global $WinTitle, $WinText, $hMsg, $hCtl
-	LogWrite("Initialising variables")
+   Global $WinTitle, $WinText, $hMsg, $hCtl
+   LogWrite("Initialising variables")
 
    if (PSMGenericClient_Init() <> $PSM_ERROR_SUCCESS) Then
     Error(PSMGenericClient_PSMGetLastErrorString())
