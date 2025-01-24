@@ -42,7 +42,7 @@ function Get-SAMLResponse{
 
 $Idp_URL = "idpurl"
 $Base_URL = "https://PVWA/PasswordVault/API"
-$Object = "INTL-SA758357" #Specify Name property of your account here
+$Object = "objectname" #Specify Name property of your account here
 
 try {
 
