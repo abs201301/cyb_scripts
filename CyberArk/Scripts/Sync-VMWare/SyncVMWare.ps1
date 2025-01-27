@@ -2,9 +2,9 @@ function Add-Host {
   param ($Host)
 
   #Add and reconcile account
-	$objName = ${Host.Name}-root
+  $objName = ${Host.Name}-root
   $safe = $Host.SafeName
-	$address = $Host.Name
+  $address = $Host.Name
   $platform = "Platform1"
   $res = Add-PASAccount -name $objName -address $address -userName 'root' -platformID $platform -SafeName $safe
   Invoke-PASCPMOperation -AccountID $res.id -ReconcileTask
