@@ -45,7 +45,7 @@ def wait_for_saml_response(driver, timeout=20):
 ############################################################
 
 IDP_URL = "https://launcher.myapps.microsoft.com/api/signin/<TenantID>"
-BASE_URL = "https://<PVWA/PasswordVault/API"
+BASE_URL = "https://<PVWA>/PasswordVault/API"
 profile_path = "C:/Users/<Pathtofolder>/Edge"
 ACCOUNT_NAME = "<AccountName"
 ssl_verify = True
