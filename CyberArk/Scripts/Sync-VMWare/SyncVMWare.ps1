@@ -53,15 +53,15 @@ Add-Content -Path $logpath -Value ((Get-Date -Format "yyyy/MM/dd HH:mm") + " Syn
 
 # vCenter to Safe Mapping
 $vCenterToSafeMap = @{
-    "vcenter1.uk.fid-intl.com" = $APSafe
-    "vcenter2.uk.fid-intl.com" = $ENSafe
-    "vcenter3.uk.fid-intl.com" = $GlobalSafe
+    "vcenter1" = $APSafe
+    "vcenter2" = $ENSafe
+    "vcenter3" = $GlobalSafe
 }
 # List of vCenter servers
 $vCenters = @(
-    "vcenter1.uk.fid-intl.com",
-    "vcenter2.uk.fid-intl.com",
-    "vcenter3.uk.fid-intl.com"
+    "vcenter1",
+    "vcenter2",
+    "vcenter3"
 )
 
 try {
