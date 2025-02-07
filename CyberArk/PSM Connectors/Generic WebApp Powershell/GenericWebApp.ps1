@@ -50,7 +50,7 @@ function EndScript
 ## Load Dependencies
 ##-------------------------------------------
 $logpath = '.\PSM-WebApp.log'
-$PathToFolder = 'D:\Program Files (x86)\CyberArk\PSM\Components'
+$PathToFolder = 'C:\Program Files (x86)\CyberArk\PSM\Components'
 [System.Reflection.Assembly]::LoadFrom($PathToFolder + "\WebDriver.dll" -f $PathToFolder) | Out-Null
 if ($env:Path -notcontains ";$PathToFolder" ) {
     $env:Path += ";$PathToFolder"
