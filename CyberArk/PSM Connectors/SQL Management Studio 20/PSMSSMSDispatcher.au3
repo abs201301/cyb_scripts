@@ -1,4 +1,3 @@
-
 #AutoIt3Wrapper_UseX64=n
 Opt("MustDeclareVars", 1)
 AutoItSetOption("WinTitleMatchMode", -1) ; Match from Start case insensitive
@@ -6,13 +5,15 @@ AutoItSetOption("SendKeyDelay", 30) ; Match from Start case insensitive
 
 ;============================================================
 ;           SQL Server Management Studio 20
-;           --------------------------------
+;           -------------------------------
 ; Description : PSM Dispatcher for SSMS 20
-; Abhishek Singh
+; Created : Sep 16, 2024
 ; Developed and compiled in AutoIt 3.3.14.1
 ;============================================================
 
 #include "PSMGenericClientWrapper.au3"
+#include <FileConstants.au3>
+#include <WinAPIFiles.au3>
 #include <WindowsConstants.au3>
 #include <AutoItConstants.au3>
 #include <File.au3>
@@ -29,6 +30,10 @@ Global $TargetPassword   ;Will be fetched from the PSM Session
 Global $TargetAddress    ;Will be fetched from the PSM Session
 Global $TargetPort       ;Will be fetched from the PSM Session
 Global $TargetDomain      ;Will be fetched from the PSM Session
+Global $PS_EXE   ;Will be fetched from the PSM Session
+Global $Script_Path   ;Will be fetched from the PSM Session
+Global $Script_Name   ;Will be fetched from the PSM Session
+Global $sPSCmd
 Global $Sleep = 200
 Global $Longsleep = 2000
 Global $ConnectionClientPID = 0
@@ -45,8 +50,8 @@ Exit Main()
 
 Func Main()
 
-   Global $WinTitle, $WinText, $hMsg, $hCtl
-   LogWrite("Initialising variables")
+	Global $WinTitle, $WinText, $hMsg, $hCtl
+	LogWrite("Initialising variables")
 
    if (PSMGenericClient_Init() <> $PSM_ERROR_SUCCESS) Then
     Error(PSMGenericClient_PSMGetLastErrorString())
@@ -55,13 +60,11 @@ Func Main()
    LogWrite("successfully initialized Dispatcher Utils Wrapper")
 
    FetchSessionProperties()
+	if (PSMGenericClient_MapTSDrives() <> $PSM_ERROR_SUCCESS) Then
+		Error(PSMGenericClient_PSMGetLastErrorString())
+    EndIf
    MessageUserOn("PSM-" & $DISPATCHER_NAME, "Starting " & $DISPATCHER_NAME & "...")
-   LogWrite("mapping local drives")
 
-   if (PSMGenericClient_MapTSDrives() <> $PSM_ERROR_SUCCESS) Then
-	Error(PSMGenericClient_PSMGetLastErrorString())
-   EndIf
-   
 	DirRemove (_PathFull("SQL Server Management Studio", @AppDataDir & "\Microsoft"), 1)
 	LogWrite("Starting client application")
    
@@ -117,13 +120,17 @@ Func Main()
 	Else
 		LogWrite("Window: " & $WinTitle & " not found")
 	EndIf
-
+	
+	LogWrite("Mapping local drives")
+	MapLocalDrives()
+	
 	LogWrite("sending PID to PSM")
 
 	if (PSMGenericClient_SendPID($ConnectionClientPID) <> $PSM_ERROR_SUCCESS) Then
 		Error(PSMGenericClient_PSMGetLastErrorString())
 	EndIf
-	MessageUserOff()
+   MessageUserOff()
+   
    LogWrite("Terminating Dispatcher Utils Wrapper")
    PSMGenericClient_Term()
 
@@ -194,12 +201,24 @@ Func FetchSessionProperties()
 		Error(PSMGenericClient_PSMGetLastErrorString())
 	EndIf
 
-    if (PSMGenericClient_GetSessionProperty("PSMRemoteMachine", $TargetAddress) <> $PSM_ERROR_SUCCESS) Then
+    	if (PSMGenericClient_GetSessionProperty("PSMRemoteMachine", $TargetAddress) <> $PSM_ERROR_SUCCESS) Then
 		Error(PSMGenericClient_PSMGetLastErrorString())
 	EndIf
 	
 	If (PSMGenericClient_GetSessionProperty("CLIENT_EXECUTABLE", $CLIENT_EXECUTABLE) <> $PSM_ERROR_SUCCESS) Then
 		Error("Error getting EXE path " & PSMGenericClient_PSMGetLastErrorString())
+	EndIf
+	
+	if (PSMGenericClient_GetSessionProperty("PS_EXE", $PS_EXE) <> $PSM_ERROR_SUCCESS) Then
+		Error(PSMGenericClient_PSMGetLastErrorString())
+	EndIf
+	
+	if (PSMGenericClient_GetSessionProperty("Script_Path", $Script_Path) <> $PSM_ERROR_SUCCESS) Then
+		Error(PSMGenericClient_PSMGetLastErrorString())
+	EndIf
+	
+	if (PSMGenericClient_GetSessionProperty("Script_Name", $Script_Name) <> $PSM_ERROR_SUCCESS) Then
+		Error(PSMGenericClient_PSMGetLastErrorString())
 	EndIf
 
 EndFunc
@@ -219,4 +238,39 @@ EndFunc
 ; ===============================================================================================================================
 Func MessageUserOff()
     SplashOff()
+EndFunc
+
+; <------------- Function to map local drives -------------->
+Func MapLocalDrives()
+	
+	Local $sScript, $dScript, $LogFile, $LogData, $iPID
+	
+	$sScript = $Script_Path & "\" & $Script_Name
+	$dScript = @UserProfileDir & "\" & $Script_Name
+	$LogFile = @UserProfileDir & "\DriveMapping.Log"
+	
+	If Not FileExists($sScript) Then
+		LogWrite("Error: Source PowerShell script not found: " & $sScript)
+		Exit
+	EndIf
+	
+	FileCopy($sScript, $dScript, 1)
+	
+	If Not FileExists($dScript) Then
+		LogWrite("Error: Failed to copy the PowerShell script to: " & $dScript)
+		Exit
+	EndIf
+	
+	$sPSCmd = $PS_EXE & " -File "& '"'&$dScript &'"' 
+	$iPID = RunWait(@ComSpec & " /c " & $sPSCmd, "", @SW_HIDE, $STDERR_MERGED)
+	
+	If Not FileExists($LogFile) Then
+		LogWrite("Error: Log file not found!")
+	Else
+		LogWrite("For drive mapping results, review PS log file under :" & $LogFile)
+	EndIf
+	
+	Local $fDelete = FileDelete ($dScript)
+	LogWrite("Powershell script deleted successfully from :" & $dScript)
+
 EndFunc
