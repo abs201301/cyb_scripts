@@ -153,7 +153,7 @@ NP_ACCOUNT  = "<Account1>"
 P_ACCOUNT = "<Account2>"
 GW_ACCOUNT = "<Account3>"
 ticketing_system = "ServiceNow"
-SSH_TIMEOUT = 14400
+timeout_hours = 4
 KEY_FORMAT = "OpenSSH"
 ssl_verify = True
 wait_time = 20
@@ -167,51 +167,55 @@ hosts = [
    { "Name": "<Host4>", "Environment": "<ENV>", "Component": "<HostType>" },
 ]
 
-# Check if SSH key exists and is not older than 4 hours
-if os.path.exists(KEY_PATH):
-   last_modified = datetime.datetime.fromtimestamp(os.path.getmtime(KEY_PATH))
-   age = datetime.datetime.now() - last_modified
-   if age.total_seconds() / 3600 > timeout_hours:
-       print("The SSH key is older than 4 hours. Generating a new key...")
+def main():
+    # Check if SSH key exists and is not older than 4 hours
+    if os.path.exists(KEY_PATH):
+       last_modified = datetime.datetime.fromtimestamp(os.path.getmtime(KEY_PATH))
+       age = datetime.datetime.now() - last_modified
+       if age.total_seconds() / 3600 > timeout_hours:
+           print("The SSH key is older than 4 hours. Generating a new key...")
+           get_ssh_key()
+       else:
+           print("SSH key is still valid. Proceeding to connection...")
+    else:
+       print("SSH key does not exist. Generating a new key...")
        get_ssh_key()
-   else:
-       print("SSH key is still valid. Proceeding to connection...")
-else:
-   print("SSH key does not exist. Generating a new key...")
-   get_ssh_key()
-# Prompt user to select a target host
-print("Please choose a host to connect to:")
-for i, host in enumerate(hosts, start=1):
-   print(f"{i}. {host['Name']}")
-selection = input(f"Enter your choice (1-{len(hosts)}): ")
-if selection.isdigit() and 1 <= int(selection) <= len(hosts):
-   selected_host = hosts[int(selection) - 1]
-   hostname = selected_host["Name"]
-   print(f"Connecting to {hostname}...")
-   if selected_host["Environment"] == "<ENV>":
-       ticket_id = input("Enter SNOW ticket number: ")
-       if selected_host["Component"] == "<HostType>":
-           connection_string = f"+vu+{username}+tu+{P_ACCOUNT}+da+{DOMAIN}+ta+{hostname}+ti+{ticket_id}+ts+{ticketing_system}@{PSMP}"
+    # Prompt user to select a target host
+    print("Please choose a host to connect to:")
+    for i, host in enumerate(hosts, start=1):
+       print(f"{i}. {host['Name']}")
+    selection = input(f"Enter your choice (1-{len(hosts)}): ")
+    if selection.isdigit() and 1 <= int(selection) <= len(hosts):
+       selected_host = hosts[int(selection) - 1]
+       hostname = selected_host["Name"]
+       print(f"Connecting to {hostname}...")
+       if selected_host["Environment"] == "<ENV>":
+           ticket_id = input("Enter SNOW ticket number: ")
+           if selected_host["Component"] == "<HostType>":
+               connection_string = f"+vu+{username}+tu+{P_ACCOUNT}+da+{DOMAIN}+ta+{hostname}+ti+{ticket_id}+ts+{ticketing_system}@{PSMP}"
+           else:
+               connection_string = f"+vu+{username}+tu+{GW_ACCOUNT}+ta+{hostname}+ti+{ticket_id}+ts+{ticketing_system}@{PSMP}"
        else:
-           connection_string = f"+vu+{username}+tu+{GW_ACCOUNT}+ta+{hostname}+ti+{ticket_id}+ts+{ticketing_system}@{PSMP}"
-   else:
-       if selected_host["Component"] == "<HostType>":
-           connection_string = f"{username}@{NP_ACCOUNT}#{DOMAIN}@{hostname}@{PSMP}"
-       else:
-           connection_string = f"{username}@{GW_ACCOUNT}@{hostname}@{PSMP}"
-   # Clear terminal screen
-   os.system("cls" if os.name == "nt" else "clear")
-   # Start SSH session
-   ssh_command = [
-       "ssh",
-       "-q",
-       "-o", "StrictHostKeyChecking=no",
-       "-o", "UserKnownHostsFile=/dev/null",
-       "-o", "BatchMode=no",
-       "-i", KEY_PATH,
-       connection_string
-   ]
-   subprocess.run(ssh_command, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
-else:
-   print("Invalid choice. Exiting.")
-   exit(1)
+           if selected_host["Component"] == "<HostType>":
+               connection_string = f"{username}@{NP_ACCOUNT}#{DOMAIN}@{hostname}@{PSMP}"
+           else:
+               connection_string = f"{username}@{GW_ACCOUNT}@{hostname}@{PSMP}"
+       # Clear terminal screen
+       os.system("cls" if os.name == "nt" else "clear")
+       # Start SSH session
+       ssh_command = [
+           "ssh",
+           "-q",
+           "-o", "StrictHostKeyChecking=no",
+           "-o", "UserKnownHostsFile=/dev/null",
+           "-o", "BatchMode=no",
+           "-i", KEY_PATH,
+           connection_string
+       ]
+       subprocess.run(ssh_command, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+    else:
+       print("Invalid choice. Exiting.")
+       exit(1)
+   
+if __name__ == "__main__":
+   main()
