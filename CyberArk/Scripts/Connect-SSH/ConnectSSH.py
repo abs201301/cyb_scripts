@@ -228,20 +228,30 @@ def main():
            # Initialize Paramiko SSH client
            SSH = paramiko.SSHClient()
            SSH.set_missing_host_key_policy(paramiko.AutoAddPolicy())
-          
            # Connect using the SSH key and passphrase
            SSH.connect(PSMP, username=connection_string, key_filename=KEY_PATH, passphrase=passphrase)
-           # Run your SSH command
-           stdin, stdout, stderr = SSH.exec_command("echo 'SSH Connection Established'")
-           print(stdout.read().decode())
-       except Exception as e:
-           print(f"Connection failed: {e}")
+           # Open interactive shell
+           channel = SSH.invoke_shell()
+           while True:
+              try:
+                 command = input("$ ")
+                 if command.lower() in ["exit", "logout", "quit"]:
+                    print("Closing SSH session...")
+                    break
+                 channel.send(command + "\n")
+                 time.sleep(1)
+                 while channel.recv_ready():
+                    output = channel.recv(4096).decode()
+                    print(output, end="")
+              except KeyboardInterrupt:
+                 print("\nClosing SSH session...")
+                 break
+           channel.close()
        finally:
-           # Close the SSH connection
-           SSH.close()
-    else:
-       print("Invalid choice. Exiting.")
-       exit(1)
+          SSH.close()
+   else:
+      print("Invalid choice. Exiting.")
+      exit(1)
    
 if __name__ == "__main__":
    main()
