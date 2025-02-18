@@ -1,6 +1,7 @@
 import os
 import sys
 import datetime
+import time
 import re
 import requests
 import json
@@ -8,7 +9,9 @@ import urllib.parse
 import random
 import string
 import subprocess
+import paramiko
 from pathlib import Path
+import xml.etree.ElementTree as ET
 from seleniumwire import webdriver
 from selenium.webdriver.common.by import By
 from selenium.webdriver.edge.options import Options
@@ -36,7 +39,7 @@ def wait_for_saml_response(driver, timeout=20):
          print("Timeout reached.")
          return None
 
-# Function to generate 12 chars long passphrase
+# Function to generate 14 chars long passphrase
 def generate_passphrase(length=14):
    if length < 4:
        raise ValueError("Passphrase length must be at least 4 to meet the criteria.")
@@ -50,7 +53,23 @@ def generate_passphrase(length=14):
    all_chars = lowercase + digits + uppercase
    passphrase += random.choices(all_chars, k=length - len(passphrase))
    random.shuffle(passphrase)
-   return ''.join(passphrase)
+   passphrase = ''.join(passphrase)
+   root = ET.Element("Credentials")
+   passphrase_element = ET.SubElement(root, "Passphrase")
+   passphrase_element.text = passphrase
+   tree = ET.ElementTree(root)
+   tree.write(PASSPHRASE_FILE)
+   return passphrase
+
+def get_passphrase():
+
+   if os.path.exists(PASSPHRASE_FILE):
+       tree = ET.parse(PASSPHRASE_FILE)
+       root = tree.getroot()
+       return root.find("Passphrase").text.strip()
+   else:
+       print("[ERROR] Passphrase file not found.")
+       exit(1)
 
 # Function to generate MFA caching SSH key
 def get_ssh_key():
@@ -146,6 +165,7 @@ BASE_URL = "https://<PVWA>/PasswordVault/API"
 username = os.getlogin()
 BASE_LOCATION = f"C:/Users/{username}/Connect-SSH"
 KEY_PATH = f"{BASE_LOCATION}/CAMFAKey.openssh"
+PASSPHRASE_FILE = f"{BASE_LOCATION}/Passphrase.xml"
 profile_path = f"{BASE_LOCATION}/Edge"
 PSMP = "<PSMP>"
 DOMAIN = "<DOMAIN>"
@@ -203,16 +223,22 @@ def main():
        # Clear terminal screen
        os.system("cls" if os.name == "nt" else "clear")
        # Start SSH session
-       ssh_command = [
-           "ssh",
-           "-q",
-           "-o", "StrictHostKeyChecking=no",
-           "-o", "UserKnownHostsFile=/dev/null",
-           "-o", "BatchMode=no",
-           "-i", KEY_PATH,
-           connection_string
-       ]
-       subprocess.run(ssh_command, stdout=subprocess.DEVNULL, stderr=subprocess.DEVNULL)
+       passphrase = get_passphrase()
+       try:
+           # Initialize Paramiko SSH client
+           SSH = paramiko.SSHClient()
+           SSH.set_missing_host_key_policy(paramiko.AutoAddPolicy())
+          
+           # Connect using the SSH key and passphrase
+           SSH.connect(PSMP, username=connection_string, key_filename=KEY_PATH, passphrase=passphrase)
+           # Run your SSH command
+           stdin, stdout, stderr = SSH.exec_command("echo 'SSH Connection Established'")
+           print(stdout.read().decode())
+       except Exception as e:
+           print(f"Connection failed: {e}")
+       finally:
+           # Close the SSH connection
+           SSH.close()
     else:
        print("Invalid choice. Exiting.")
        exit(1)
