@@ -9,7 +9,7 @@ import urllib.parse
 import random
 import string
 import subprocess
-import paramiko
+import pyautogui
 from pathlib import Path
 import xml.etree.ElementTree as ET
 from seleniumwire import webdriver
@@ -70,7 +70,46 @@ def get_passphrase():
    else:
        print("[ERROR] Passphrase file not found.")
        exit(1)
+# Function to check if Pageant is running
+def is_pageant_running():
+   result = subprocess.run("tasklist", capture_output=True, text=True)
+   return "pageant.exe" in result.stdout.lower()
 
+# Function to start Pageant and load the SSH key
+def start_pageant():
+   if not is_pageant_running():
+       print("Starting Pageant and loading the SSH key...")
+       subprocess.run([PAGEANT_PATH], check=True)
+       time.sleep(2)
+   else:
+       print("Pageant is already running.")
+
+# Add the key to Pageant with passphrase
+def add_key_to_pageant():
+   #passphrase = get_passphrase() <Retrieves passphrase value from XML>
+   passphrase = os.environ.get("passphrase")
+   print(f"Passphrase: {passphrase}")
+   try:
+      command = f'echo {passphrase} | "{PAGEANT_PATH}" "{KEY_PATH}"'
+      subprocess.run(command, shell=True)
+      #pyautogui.write(passphrase, interval=0.01)
+      #pyautogui.press("enter")
+      print("[SUCCESS] SSH key added to Pageant.")
+   except Exception as e:
+      print(f"[ERROR] Failed to add key to Pageant: {e}")
+      exit(1)
+       
+# Function to start PuTTY with a connection string
+def start_putty(connection_string):
+   putty_args = [
+       PUTTY_PATH,
+       "-load", "MySavedSession",  # If you have a saved session
+       "-ssh",
+       connection_string,
+   ]
+   print(f"Launching PuTTY: {' '.join(putty_args)}")
+   subprocess.Popen(putty_args)
+   
 # Function to generate MFA caching SSH key
 def get_ssh_key():
 
@@ -128,7 +167,7 @@ def get_ssh_key():
    token = response.text.replace('"',"")
    #print(token) <Un-comment for debugging>
    # Generate MFA caching SSH key
-   passphrase = generate_passphrase(14)
+   os.environ["passphrase"] = generate_passphrase(14)
    print(f"Passphrase: {passphrase}")
    print("Generating MFA caching SSH key...")
    headers = {
@@ -137,7 +176,7 @@ def get_ssh_key():
        }
    payload = json.dumps({
        "formats": [f"{KEY_FORMAT}"],
-       'keyPassword': passphrase
+       'keyPassword': os.environ.get("passphrase")
        })
    response = requests.request("POST", f"{BASE_URL}/Users/Secret/SSHKeys/Cache/", headers=headers, data=payload, verify=ssl_verify)
    json_object = json.loads(response.text)
@@ -163,8 +202,10 @@ def get_ssh_key():
 IDP_URL = "https://launcher.myapps.microsoft.com/api/signin/<TenantID>"
 BASE_URL = "https://<PVWA>/PasswordVault/API"
 username = os.getlogin()
+PUTTY_PATH = f"C:/Users/{username}/PuTTY/putty.exe"
+PAGEANT_PATH = f"C:/Users/{username}/PuTTY/pageant.exe"
 BASE_LOCATION = f"C:/Users/{username}/Connect-SSH"
-KEY_PATH = f"{BASE_LOCATION}/CAMFAKey.openssh"
+KEY_PATH = f"{BASE_LOCATION}/CAMFAKey.ppk"
 PASSPHRASE_FILE = f"{BASE_LOCATION}/Passphrase.xml"
 profile_path = f"{BASE_LOCATION}/Edge"
 PSMP = "<PSMP>"
@@ -174,7 +215,7 @@ P_ACCOUNT = "<Account2>"
 GW_ACCOUNT = "<Account3>"
 ticketing_system = "ServiceNow"
 timeout_hours = 4
-KEY_FORMAT = "OpenSSH"
+KEY_FORMAT = "PPK"
 ssl_verify = True
 wait_time = 20
 RegEx = re.compile(r'name="SAMLResponse" value="(.*?)"')
@@ -195,16 +236,21 @@ def main():
        if age.total_seconds() / 3600 > timeout_hours:
            print("The SSH key is older than 4 hours. Generating a new key...")
            get_ssh_key()
+           start_pageant()
+           add_key_to_pageant()
        else:
            print("SSH key is still valid. Proceeding to connection...")
     else:
        print("SSH key does not exist. Generating a new key...")
        get_ssh_key()
+       start_pageant()
+       add_key_to_pageant()
+       
     # Prompt user to select a target host
     print("Please choose a host to connect to:")
     for i, host in enumerate(hosts, start=1):
        print(f"{i}. {host['Name']}")
-    selection = input(f"Enter your choice (1-{len(hosts)}): ")
+       selection = input(f"Enter your choice (1-{len(hosts)}): ")
     if selection.isdigit() and 1 <= int(selection) <= len(hosts):
        selected_host = hosts[int(selection) - 1]
        hostname = selected_host["Name"]
@@ -223,32 +269,10 @@ def main():
        # Clear terminal screen
        os.system("cls" if os.name == "nt" else "clear")
        # Start SSH session
-       passphrase = get_passphrase()
-       try:
-           # Initialize Paramiko SSH client
-           SSH = paramiko.SSHClient()
-           SSH.set_missing_host_key_policy(paramiko.AutoAddPolicy())
-           # Connect using the SSH key and passphrase
-           SSH.connect(PSMP, username=connection_string, key_filename=KEY_PATH, passphrase=passphrase)
-           # Open interactive shell
-           channel = SSH.invoke_shell()
-           while True:
-              try:
-                 command = input("$ ")
-                 if command.lower() in ["exit", "logout", "quit"]:
-                    print("Closing SSH session...")
-                    break
-                 channel.send(command + "\n")
-                 time.sleep(1)
-                 while channel.recv_ready():
-                    output = channel.recv(4096).decode()
-                    print(output, end="")
-              except KeyboardInterrupt:
-                 print("\nClosing SSH session...")
-                 break
-           channel.close()
-       finally:
-          SSH.close()
+       start_putty(connection_string)
+   else:
+      print("Invalid choice. Exiting.")
+      exit(1)
    else:
       print("Invalid choice. Exiting.")
       exit(1)
