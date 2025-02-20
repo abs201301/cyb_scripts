@@ -273,10 +273,10 @@ EndFunc
 
 Func SetupEdge() ;-----------> Prepares Webdriver capabilities and creates browser session
 		
-	_WD_Option('Driver', 'chromedriver.exe')
-    _WD_Option('Port', 9515)
+        _WD_Option('Driver', 'chromedriver.exe')
+        _WD_Option('Port', 9515)
 	Local $sParams = '--port=9515 --debug --log-path="' & @UserProfileDir & '\chrome.log"'
-    Local $sCommand = StringFormat('"%s", %s', $DriverPath, $sParams)
+        Local $sCommand = StringFormat('"%s", %s', $DriverPath, $sParams)
 
 	LogWrite("Launching Edge Webdriver")
 	Run($sCommand, "", @SW_HIDE)
