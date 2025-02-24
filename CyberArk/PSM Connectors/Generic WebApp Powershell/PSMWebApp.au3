@@ -4,13 +4,14 @@ AutoItSetOption("WinTitleMatchMode", 3) ; EXACT_MATCH!
 
 ;============================================================
 ;           Generic Web Portal
-;           ------------------
+;           ----------------------------------------------------------
 ; Description : PSM Dispatcher for Websites
+; Created : 06.11.2024
 ; Abhishek Singh
 ; Developed and compiled in AutoIt 3.3.14.1
-;=====================================================================
-; A generic AutoIT script to call the Selenium based Powershell script
-;=====================================================================
+;============================================================
+; Uses Selenium Framework
+;============================================================
 
 #include "PSMGenericClientWrapper.au3"
 #include <GUIConstantsEx.au3>
@@ -24,7 +25,7 @@ AutoItSetOption("WinTitleMatchMode", 3) ; EXACT_MATCH!
 
 Global $ERROR_MESSAGE_TITLE 
 Global $LOG_MESSAGE_PREFIX 
-Global $DISPATCHER_NAME  ;Will be fetched from the PSM Session
+Global $AppName  ; Will be fetched from the PSM Session
 Global $PS_EXE   ;Will be fetched from the PSM Session
 Global $Script_Path   ;Will be fetched from the PSM Session
 Global $Script_Name   ;Will be fetched from the PSM Session
@@ -70,14 +71,14 @@ Func FetchSessionProperties()
 	EndIf
 	
 	if (PSMGenericClient_GetSessionProperty("PSMRemoteMachine", $RemoteMachine) <> $PSM_ERROR_SUCCESS) Then
-		;Error(PSMGenericClient_PSMGetLastErrorString())
+		LogWrite("PSMRemoteMachine is not defined")
 	EndIf
 	
 	if (PSMGenericClient_GetSessionProperty("LogonDomain", $TargetDomain) <> $PSM_ERROR_SUCCESS) Then
-		;Error(PSMGenericClient_PSMGetLastErrorString())
+		LogWrite("LogonDomain parameter is missing")
 	EndIf
 	
-	if (PSMGenericClient_GetSessionProperty("DISPATCHER_NAME", $DISPATCHER_NAME) <> $PSM_ERROR_SUCCESS) Then
+	if (PSMGenericClient_GetSessionProperty("AppName", $AppName) <> $PSM_ERROR_SUCCESS) Then
 		Error(PSMGenericClient_PSMGetLastErrorString())
 	EndIf
 	
@@ -112,18 +113,12 @@ Func Main()
 	EndIf
 
 	FetchSessionProperties()
+	Global $DISPATCHER_NAME 			= $AppName
 	$ERROR_MESSAGE_TITLE  	= "PSM " & $DISPATCHER_NAME & " Dispatcher error message"
 	$LOG_MESSAGE_PREFIX 		= $DISPATCHER_NAME & " Dispatcher - "
 	
 	MessageUserOn("PSM-" & $DISPATCHER_NAME & "-WebApp", "Starting " & $DISPATCHER_NAME & "...")
 	LogWrite("Starting selenium wrapper")
-	
-	If $RemoteMachine <> "" Then
-		LogWrite("Using RemoteMachine as address")
-		$TargetAddress = $RemoteMachine
-	Else
-		LogWrite("Using TargetAddress as address")
-	EndIf
 	
 	$ConnectionClientPID  = LaunchEdge()
 
@@ -153,7 +148,7 @@ EndFunc
 ; Name...........: Error
 ; Description ...: An exception handler - displays an error message and terminates the dispatcher
 ; Parameters ....: $ErrorMessage - Error message to display
-; $Code 		 - [Optional] Exit error code
+; 				   $Code 		 - [Optional] Exit error code
 ; ===============================================================================================================================
 Func Error($ErrorMessage, $Code = -1)
 
@@ -218,16 +213,29 @@ EndFunc
 ; ===============================================================================================================================
 Func LaunchEdge()
 
+	If $RemoteMachine <> "" Then
+		LogWrite("Using RemoteMachine as address")
+		$TargetAddress = $RemoteMachine
+	Else
+		LogWrite("Using TargetAddress as address")
+	EndIf
+	
 	LogWrite("Sending file copy cmd")
 	FileCopy($Script_Path & "\" & $Script_Name, @AppDataDir, 1)
 	
 	$sScript = @AppDataDir & "\" & $Script_Name
 	Local $encodedPassword = _Base64Encode(StringToBinary($TargetPassword, 4))
-	$sPSCmd = $PS_EXE & " -File "& '"'&$sScript &'" ' & $TargetAddress & ' ' & $TargetUsername & ' ' & $encodedPassword
+	If $AppName = "Azure" Then
+		Local $sUsername = $TargetUsername & "@<Domain>"
+		Local $sAddress = "myapps.microsoft.com"
+		$sPSCmd = $PS_EXE & " -File "& '"'&$sScript &'" ' & $sAddress & ' ' & $sUsername & ' ' & $AppName & ' ' & $encodedPassword
+	Else
+		$sPSCmd = $PS_EXE & " -File "& '"'&$sScript &'" ' & $TargetAddress & ' ' & $TargetUsername & ' ' & $AppName & ' ' & $encodedPassword
+	EndIf
 	LogWrite("Sending connection string")
 	
 	If $TargetDomain <> "" Then
-		$iPID = RunAs($TargetUsername, $TargetDomain, $TargetPassword, 2, @ComSpec & " /k " & $sPSCmd, @AppDataDir, @SW_HIDE, $STDERR_MERGED)
+		$iPID = RunAs($TargetUsername, $TargetDomain, $TargetPassword, 2, @ComSpec & " /c " & $sPSCmd, @AppDataDir, @SW_HIDE, $STDERR_MERGED)
 		LogWrite("Creating browser session using RunAs capability")
 	Else
 		$iPID = Run(@ComSpec & " /k " & $sPSCmd, @AppDataDir, @SW_HIDE, $STDERR_MERGED)
