@@ -133,10 +133,6 @@ Func Main()
 	LogWrite("Terminating Dispatcher Utils Wrapper")
 	PSMGenericClient_Term()
 	
-	While ProcessExists($ConnectionClientPID)
-		Sleep(1000)
-	WEnd
-
 	Return $PSM_ERROR_SUCCESS
 EndFunc
 
@@ -246,6 +242,11 @@ Func LaunchEdge()
 		Error("Error running scipt: " & @error & " - " & PSMGenericClient_PSMGetLastErrorString())
 	EndIf
 	
+	While ProcessExists($iPID)
+		Sleep(1000)
+	WEnd
+	
+	Local $CleanEnv = CleanEnv()
 	$iPID = Login()
 	Return $iPID
 
@@ -291,4 +292,33 @@ Func CloseSession()
 		ProcessClose($iPID)
 	EndIf
 
+EndFunc
+
+Func CleanEnv() ;----------------------------------------->> Deletes any Powershell transcript generated during the login process
+
+	Local $iDelete = FileDelete($sScript)
+	Local $sDate = @YEAR & @MON & @MDAY
+	Local $sTranscriptFolder = @UserProfileDir & "\Documents\" & $sDate & "\"
+	
+	If FileExists($sTranscriptFolder) Then
+		Local $sFile = FileFindFirstFile($sTranscriptFolder & "PowerShell_Transcript*.txt")
+		If $sFile = -1 Then
+			LogWrite("Info: No PowerShell transcript files found for today.")
+		Else
+        While 1
+            Local $sFileName = FileFindNextFile($sFile)
+            If @error Then ExitLoop
+				Local $sFullPath = $sTranscriptFolder & $sFileName
+				If FileDelete($sFullPath) Then
+					LogWrite("Success: Deleted transcript: " & $sFullPath)
+				Else
+					LogWrite("Error: Failed to delete: " & $sFullPath)
+				EndIf
+        WEnd
+        FileClose($sFile)
+		EndIf
+	Else
+		LogWrite("Info: Transcript folder not found: " & $sTranscriptFolder)
+	EndIf 
+	
 EndFunc
