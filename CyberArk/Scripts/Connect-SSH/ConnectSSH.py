@@ -79,22 +79,28 @@ def is_pageant_running():
 def start_pageant():
    if not is_pageant_running():
        print("Starting Pageant and loading the SSH key...")
-       subprocess.run([PAGEANT_PATH], check=True)
+       subprocess.Popen([PAGEANT_PATH])
        time.sleep(2)
    else:
        print("Pageant is already running.")
 
 # Add the key to Pageant with passphrase
 def add_key_to_pageant():
-   #passphrase = get_passphrase() <Retrieves passphrase value from XML>
    passphrase = os.environ.get("passphrase")
    print(f"Passphrase: {passphrase}")
    try:
-      command = f'echo {passphrase} | "{PAGEANT_PATH}" "{KEY_PATH}"'
-      subprocess.run(command, shell=True)
-      #pyautogui.write(passphrase, interval=0.01)
-      #pyautogui.press("enter")
-      print("[SUCCESS] SSH key added to Pageant.")
+      process = subprocess.Popen(
+           [PAGEANT_PATH, KEY_PATH],
+           stdin=subprocess.PIPE,
+           stdout=subprocess.PIPE,
+           stderr=subprocess.PIPE,
+           text=True
+           )
+      process.communicate(input=passphrase + "\n")
+      if process.returncode == 0:
+         print("[SUCCESS] SSH key added to Pageant.")
+      else:
+         print(f"[ERROR] Failed to add key. Return code: {process.returncode}")
    except Exception as e:
       print(f"[ERROR] Failed to add key to Pageant: {e}")
       exit(1)
