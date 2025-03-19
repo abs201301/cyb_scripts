@@ -26,11 +26,31 @@ function Get-SAMLResponse{
     [System.Windows.Forms.Application]::Run($form)
 
     if ($global:SAMLResponse) {
-       Write-Output $global:SAMLResponse
+       $result = $global:SAMLResponse
        Remove-Variable -Name SAMLResponse -Scope Global -ErrorAction SilentlyContinue
+       return $result
     } else {
        throw "SAMLResponse not found in the network payload."
    }
+}
+
+# Function to generate Passphrase
+function Generate-Passphrase {
+   param (
+       [int]$Length = 14
+   )
+   $lower = "abcdefghijklmnopqrstuvwxyz"
+   $upper = "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
+   $number = "0123456789"
+   $Passphrase = @(
+       (Get-Random -InputObject $upper.ToCharArray())
+       '@'
+   )
+   $allChars = $lower + $number + $upper
+   $remaining = -join ((1..($Length - $Passphrase.Count)) | ForEach-Object { Get-Random -InputObject $allChars.ToCharArray() })
+   $Passphrase += $remaining.ToCharArray()
+   $Passphrase = -join (Get-Random -InputObject $Passphrase -Count $Passphrase.Length)
+   return $Passphrase
 }
 
 ########################################################
@@ -40,11 +60,10 @@ function Get-SAMLResponse{
 # Script will terminate if any errors are encountered
 ########################################################
 
-$Idp_Url = "https://<Microsoft_Online_URL>"
-$PVWA_Url = "https://<PVWA>/PasswordVault/API/auth/SAML/Logon"
-$MfaKey_Url = "https://<PVWA>/PasswordVault/API/Users/Secret/SSHKeys/Cache/"
+$Idp_Url = "https://launcher.myapps.microsoft.com/api/signin/<EntraID>?tenantId=<TenantID>"
+$Base_Url = "https://<PVWA>/PasswordVault/API"
 $username = (whoami) -split '\\' | Select-Object -Last 1
-$OutputKeyPath = "C:\Users\$username\<FoldeRName>\CAMFAkey.ppk"
+$OutputKeyPath = "C:\Users\$username\<PathToFolder>\CAMFAkey.ppk"
 
 try {
     Write-Host "Getting SAMLResponse"
@@ -57,20 +76,17 @@ try {
         apiUse='true'
         SAMLResponse = $SAMLResponse
     }
-    $sToken = Invoke-RestMethod -Uri $PVWA_Url -Method POST -Headers $headers -Body $body
+    $sToken = Invoke-RestMethod -Uri "${Base_Url}/auth/SAML/Logon" -Method POST -Headers $headers -Body $body
 
-    # Generate Passphrase on the fly and write-output
-    $upper = Get-Random -InputObject "ABCDEFGHIJKLMNOPQRSTUVWXYZ".ToCharArray()
-    $lower = Get-Random -InputObject "abcdefghijklmnopqrstuvwxyz".ToCharArray()
-    $number = Get-Random -Maximum 10
-    $PassPhrase = ([System.Web.Security.Membership]::GeneratePassword(12,2)) + $upper + $lower + $number
+    # Generate Passphrase on the fly and write-output  
+    $env:Passphrase = Generate-Passphrase -Length 14 
 
-    Write-Output "Generated Passphrase: $PassPhrase"
+    Write-Output "Generated Passphrase: $Passphrase"
     Write-Host "Requesting MFA caching SSH key..."
 
     $headers = @{'Authorization' = $sToken}
-    $body = @{ formats = @("PPK") ; keyPassword = $PassPhrase} | ConvertTo-Json
-    $sKey = Invoke-RestMethod $MfaKey_Url -Method POST -Headers $headers -ContentType application/json -Body $body
+    $body = @{ formats = @("PPK") ; keyPassword = $Passphrase} | ConvertTo-Json
+    $sKey = Invoke-RestMethod "${Base_Url}/Users/Secret/SSHKeys/Cache/" -Method POST -Headers $headers -ContentType application/json -Body $body
 
     Write-Host "Saving the SSH Key"
     $pKey = ($sKey.value | Where-Object { $_.format -eq "PPK" }).privateKey
