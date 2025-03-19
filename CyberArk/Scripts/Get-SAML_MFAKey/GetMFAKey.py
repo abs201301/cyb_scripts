@@ -35,10 +35,10 @@ def wait_for_saml_response(driver, timeout=20):
          print("Timeout reached.")
          return None
 
-# Function to generate 12 chars long passphrase
+# Function to generate 14 chars long passphrase
 def generate_passphrase(length=14):
-   if length < 4:
-       raise ValueError("Passphrase length must be at least 4 to meet the criteria.")
+   if length < 14:
+       raise ValueError("Passphrase length must be at least 14 to meet the criteria.")
    lowercase = string.ascii_lowercase
    uppercase = string.ascii_uppercase
    digits = string.digits
