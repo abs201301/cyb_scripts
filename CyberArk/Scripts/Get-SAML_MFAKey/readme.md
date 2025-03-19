@@ -8,7 +8,7 @@ The scripts written in Python and Powershell serve the same purpose, i.e. genera
 **GetMFAKey.ps1** - This is the powershell script that uses Powershell's windows forms in combination with Edge WebView to simulate the browser session to IDP (Microsoft Online). 
 As soon as number matching (MFA) is confirmed, the script using "Navigating" handler retrieves the SAMLResponse from DOC HTML parser and closes the browser window. Then REST API call to CyberArk is invoked to download the SSH key. The script also, generates secure passphrase at runtime.
 
-**GetMFAKey.py** - This repository contains a Python script that automates the process of logging into an Identity Provider (IDP) using Selenium, capturing the SAMLResponse from network requests, and utilizing it for subsequent API calls. It’s designed to handle MFA scenarios (including number matching) and includes error handling to ensure reliability.
+**GetMFAKey.py** - This is a Python script that automates the process of logging into an Identity Provider (IDP) using Selenium, capturing the SAMLResponse from network requests using Selenium_Wire, and utilizing it for subsequent API calls. It’s designed to handle MFA scenarios (including number matching) and includes error handling to ensure reliability.
 
 ***Features***
 1. Automates login to the IDP using Selenium.
@@ -27,5 +27,5 @@ Before running the script, ensure you have the following installed:
 
 ***Usage***
 1. Open the script file and update the following:
-• IDP URL: Replace IDP_URL, PVWA_URL and MFA_KEY_URL with the login page of your Identity Provider, and PVWA hostname/ fqdn.
+• IDP URL: Replace IDP_URL, BASE_URL and BASE_LOCATION with the login page of your Identity Provider, PVWA hostname/ fqdn and path to your folder where script is saved.
 2. Run the script:
