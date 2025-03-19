@@ -1,4 +1,3 @@
-
 import os
 import sys
 import time
@@ -37,7 +36,7 @@ def wait_for_saml_response(driver, timeout=20):
          return None
 
 # Function to generate 12 chars long passphrase
-def generate_passphrase(length=12):
+def generate_passphrase(length=14):
    if length < 4:
        raise ValueError("Passphrase length must be at least 4 to meet the criteria.")
    lowercase = string.ascii_lowercase
@@ -61,11 +60,12 @@ def generate_passphrase(length=12):
 # Script will terminate if any errors are encountered
 ############################################################
 
-IDP_URL = "https://<Microsoft_Online_URL>"
-PVWA_URL = "https://<PVWA>/PasswordVault/API/auth/SAML/Logon"
-MFA_KEY_URL = "https://<PVWA>/PasswordVault/API/Users/Secret/SSHKeys/Cache/"
-KEY_PATH = "C:/Users/<FOLDER_NAME>"
-profile_path = "C:/Users/<FOLDER_NAME>/Edge"
+IDP_URL = "https://launcher.myapps.microsoft.com/api/signin/<EntraID>?tenantId=<>"
+BASE_URL = "https://<PVWA>/PasswordVault/API"
+username = os.getlogin()
+BASE_LOCATION = f"C:/Users/{username}/<PathToFolder>"
+KEY_PATH = f"{BASE_LOCATION}/CAMFAKey.ppk"
+profile_path = f"{BASE_LOCATION}/Edge"
 KEY_FORMAT = "PPK"
 ssl_verify = True
 wait_time = 20
@@ -122,13 +122,13 @@ def main():
         "apiUse": "true",
         "SAMLResponse": saml_response
         }
-    response = requests.post(PVWA_URL, headers=headers, data=payload, verify=ssl_verify)
+    response = requests.post(f"{BASE_URL}/auth/SAML/Logon", headers=headers, data=payload, verify=ssl_verify)
     #print(response.json()) <Un-comment for debugging>
     token = response.text.replace('"',"")
     #print(token) <Un-comment for debugging>
 
     # Generate MFA caching SSH key
-    passphrase = generate_passphrase(12)
+    passphrase = generate_passphrase(14)
     print(f"Passphrase: {passphrase}")
     print("Generating MFA caching SSH key...")
     headers = {
@@ -139,17 +139,16 @@ def main():
         "formats": [f"{KEY_FORMAT}"],
         'keyPassword': passphrase
         })
-    response = requests.request("POST", MFA_KEY_URL, headers=headers, data=payload, verify=ssl_verify)
+    response = requests.request("POST", f"{BASE_URL}/Users/Secret/SSHKeys/Cache/", headers=headers, data=payload, verify=ssl_verify)
     json_object = json.loads(response.text)
     
     # Save the SSH key to a file
     try:
         key = json_object['value'][0]['privateKey']
         key = re.sub("\r","",key)
-        file = f"{KEY_PATH}/CAMFAkey.{KEY_FORMAT.lower()}"
-        with open(file, 'w') as f:
+        with open(KEY_PATH, 'w') as f:
             f.write(key)
-        print(f"SSH Key downloaded to {KEY_PATH}/CAMFAkey.{KEY_FORMAT.lower()}.")
+        print(f"SSH Key downloaded to {KEY_PATH}.")
     except:
         print("Sorry, an error occurred. Please check your settings and try again.")
 
