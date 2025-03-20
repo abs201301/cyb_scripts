@@ -12,6 +12,7 @@ from seleniumwire import webdriver
 from selenium.webdriver.common.by import By
 from selenium.webdriver.edge.options import Options
 from selenium.webdriver.edge.service import Service
+from webdriver_manager.microsoft import EdgeChromiumDriverManager
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 
@@ -36,17 +37,20 @@ def wait_for_saml_response(driver, timeout=20):
          return None
 
 
-############################################################
+##############################################################################
 # Main Script starts here
 # Dependencies --
-# pip install selenium seleniumwire blinker==1.7.0 requests
+# pip install selenium seleniumwire blinker==1.7.0 requests webdriver-manager
 # © Abhishek Singh
 # Script will terminate if any errors are encountered
-############################################################
+##############################################################################
 
 IDP_URL = "https://launcher.myapps.microsoft.com/api/signin/<TenantID>"
 BASE_URL = "https://<PVWA>/PasswordVault/API"
-profile_path = "C:/Users/<Pathtofolder>/Edge"
+username = os.getlogin()
+BASE_LOCATION = f"C:/Users/{username}/<Pathtofolder>"
+profile_path = f"{BASE_LOCATION}/Edge"
+driver_path = f"{BASE_LOCATION}/msedgedriver.exe"
 ACCOUNT_NAME = "<AccountName"
 ssl_verify = True
 wait_time = 20
@@ -70,11 +74,13 @@ def main():
     edge_options.add_argument('--profile-directory=Default')
     edge_options.add_experimental_option("excludeSwitches", ['enable-automation'])
     edge_options.add_argument(f"--app={IDP_URL}")
+   # service = Service(driver_path) <Un-comment and comment the one below if you want to load driver from specific path>
+   service = Service(EdgeChromiumDriverManager().install())
     swire_options = {
         'disable_encoding': True,
         'suppress_connection_errors': True
         }
-    driver = webdriver.Edge(options=edge_options, seleniumwire_options=swire_options)
+    driver = webdriver.Edge(service=service, options=edge_options, seleniumwire_options=swire_options)
 
     # Wait for SAMLResponse in network requests
     try:
