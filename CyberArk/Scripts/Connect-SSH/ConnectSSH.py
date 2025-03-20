@@ -9,7 +9,6 @@ import urllib.parse
 import random
 import string
 import subprocess
-import pyautogui
 from pathlib import Path
 import xml.etree.ElementTree as ET
 from seleniumwire import webdriver
