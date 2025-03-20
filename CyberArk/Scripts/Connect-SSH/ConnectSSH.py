@@ -16,6 +16,7 @@ from seleniumwire import webdriver
 from selenium.webdriver.common.by import By
 from selenium.webdriver.edge.options import Options
 from selenium.webdriver.edge.service import Service
+from webdriver_manager.microsoft import EdgeChromiumDriverManager
 from selenium.webdriver.support.ui import WebDriverWait
 from selenium.webdriver.support import expected_conditions as EC
 
@@ -135,11 +136,13 @@ def get_ssh_key():
    edge_options.add_argument('--profile-directory=Default')
    edge_options.add_experimental_option("excludeSwitches", ['enable-automation'])
    edge_options.add_argument(f"--app={IDP_URL}")
+   # service = Service(driver_path) <Un-comment and comment the one below if you want to load driver from specific path>
+   service = Service(EdgeChromiumDriverManager().install())
    swire_options = {
        'disable_encoding': True,
        'suppress_connection_errors': True
        }
-   driver = webdriver.Edge(options=edge_options, seleniumwire_options=swire_options)
+   driver = webdriver.Edge(service=service, options=edge_options, seleniumwire_options=swire_options)
 
    # Wait for SAMLResponse in network requests
    try:
@@ -214,6 +217,7 @@ BASE_LOCATION = f"C:/Users/{username}/Connect-SSH"
 KEY_PATH = f"{BASE_LOCATION}/CAMFAKey.ppk"
 PASSPHRASE_FILE = f"{BASE_LOCATION}/Passphrase.xml"
 profile_path = f"{BASE_LOCATION}/Edge"
+driver_path = f"{BASE_LOCATION}/msedgedriver.exe"
 PSMP = "<PSMP>"
 DOMAIN = "<DOMAIN>"
 NP_ACCOUNT  = "<Account1>"
