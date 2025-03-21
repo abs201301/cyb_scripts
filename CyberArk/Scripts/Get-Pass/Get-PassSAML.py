@@ -8,6 +8,8 @@ import json
 import urllib.parse
 import random
 import string
+import getpass
+import platform
 from seleniumwire import webdriver
 from selenium.webdriver.common.by import By
 from selenium.webdriver.edge.options import Options
@@ -41,19 +43,17 @@ def wait_for_saml_response(driver, timeout=20):
 # Main Script starts here
 # Dependencies --
 # pip install selenium seleniumwire blinker==1.7.0 requests webdriver-manager
+# Works on Windows as well as Linux
 # © Abhishek Singh
 # Script will terminate if any errors are encountered
 ##############################################################################
 
-IDP_URL = "https://launcher.myapps.microsoft.com/api/signin/<TenantID>"
+IDP_URL = "https://launcher.myapps.microsoft.com/api/signin/<EntraID>?tenantId=<TenantID>"
 BASE_URL = "https://<PVWA>/PasswordVault/API"
 username = os.getlogin()
-BASE_LOCATION = f"C:/Users/{username}/<Pathtofolder>"
-profile_path = f"{BASE_LOCATION}/Edge"
-driver_path = f"{BASE_LOCATION}/msedgedriver.exe"
-ACCOUNT_NAME = "<AccountName"
+ACCOUNT_NAME = "<AccountName>"
 ssl_verify = True
-wait_time = 20
+wait_time = 10
 RegEx = re.compile(r'name="SAMLResponse" value="(.*?)"')
 
 def main():
@@ -61,11 +61,18 @@ def main():
     # Supress un-necessary logs and warnings
     os.environ['WDM_LOG_LEVEL'] = '0'
     sys.stderr = open(os.devnull, 'w')
-
+    current_os = platform.system()
+    if current_os == "Windows":
+       BASE_LOCATION = f"C:/Users/{username}/<PathtoFolder>"
+    else:
+       BASE_LOCATION = f"/home/{username}/.config/edge-profile"
+    profile_path = f"{BASE_LOCATION}/Edge"
+    driver_path = f"{BASE_LOCATION}/msedgedriver.exe"
     # Setup selenium and selenium_wire capabiliies
     edge_options = webdriver.EdgeOptions()
     edge_options.add_argument("--headless")
     edge_options.add_argument("--log-level=3")
+    #edge_options.add_argument("InPrivate")
     edge_options.add_experimental_option("excludeSwitches", ["enable-logging"])
     edge_options.add_argument('--start-maximized')
     edge_options.add_argument('useAutomationExtesion=false')
@@ -74,28 +81,58 @@ def main():
     edge_options.add_argument('--profile-directory=Default')
     edge_options.add_experimental_option("excludeSwitches", ['enable-automation'])
     edge_options.add_argument(f"--app={IDP_URL}")
-   # service = Service(driver_path) <Un-comment and comment the one below if you want to load driver from specific path>
-   service = Service(EdgeChromiumDriverManager().install())
+    # service = Service(driver_path) <Un-comment and comment the one below if you want to load driver from specific path>
+    service = Service(EdgeChromiumDriverManager().install())
     swire_options = {
         'disable_encoding': True,
         'suppress_connection_errors': True
         }
-    driver = webdriver.Edge(service=service, options=edge_options, seleniumwire_options=swire_options)
-
+    driver = webdriver.Edge(service=service, options=edge_options, seleniumwire_options=swire_options)    
     # Wait for SAMLResponse in network requests
     try:
-        driver
-        num_element = WebDriverWait(driver, wait_time).until(
-               EC.presence_of_element_located((By.XPATH, "//*[@id='idRichContext_DisplaySign' or contains(text(), 'displaySign')]"))
-               )
-        num_text = num_element.text.strip()
-        print(f"Enter: {num_text} in Authenticator App")
-        saml_response = wait_for_saml_response(driver)
-        if saml_response:
-            #print(saml_response) <Un-comment for debugging>
-            print("SAMLResponse found.")
-        else:
-            print("SAMLResponse not found.")
+       driver
+       if current_os == "Windows":
+          num_element = WebDriverWait(driver, wait_time).until(
+                 EC.presence_of_element_located((By.XPATH, "//*[@id='idRichContext_DisplaySign' or contains(text(), 'displaySign')]"))
+                 )
+          num_text = num_element.text.strip()
+          print(f"Enter: {num_text} in Authenticator App")
+       else:
+          EMAIL = "<YourEmail>"
+          PASSWORD = getpass.getpass("Enter your password: ")
+          time.sleep(3)
+          username_field = WebDriverWait(driver, wait_time).until(
+                 EC.presence_of_element_located((By.ID, "i0116"))
+                 )
+          username_field.send_keys(EMAIL)
+          submit_button = WebDriverWait(driver, wait_time).until(
+                 EC.presence_of_element_located((By.XPATH, "//*[@type='submit']"))
+                 )
+          submit_button.click()
+          time.sleep(2)
+          password_field = WebDriverWait(driver, wait_time).until(
+                 EC.presence_of_element_located((By.ID, "i0118"))
+                 )
+          password_field.send_keys(PASSWORD)
+          submit_button = WebDriverWait(driver, wait_time).until(
+                 EC.presence_of_element_located((By.XPATH, "//*[@type='submit']"))
+                 )
+          submit_button.click()    
+          num_element = WebDriverWait(driver, wait_time).until(
+                 EC.presence_of_element_located((By.XPATH, "//*[@id='idRichContext_DisplaySign' or contains(text(), 'displaySign')]"))
+                 )
+          num_text = num_element.text.strip()
+          print(f"Enter: {num_text} in Authenticator App")
+          final_button = WebDriverWait(driver, wait_time).until(
+                 EC.presence_of_element_located((By.ID, "idBtn_Back"))
+                 )
+          final_button.click()
+       saml_response = wait_for_saml_response(driver)
+       if saml_response:
+           #print(saml_response) <Un-comment for debugging>
+           print("SAMLResponse found.")
+       else:
+           print("SAMLResponse not found.")
     finally:
        driver.quit()
        
@@ -130,7 +167,7 @@ def main():
        "Content-Type": "application/json"
        }
     payload = json.dumps({
-       "reason": "Test"
+       "reason": "BAU"
        })
     response = requests.post(f"{BASE_URL}/Accounts/{ACCOUNT_ID}/Password/Retrieve/", headers=headers, data=payload, verify=ssl_verify)
     password = response.text.replace('"',"")
@@ -138,4 +175,4 @@ def main():
 
 if __name__ == "__main__":
    main()
-    
+   
