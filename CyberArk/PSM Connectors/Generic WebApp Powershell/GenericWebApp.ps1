@@ -1,24 +1,3 @@
-# Function to hide browser window
-function Hide-Window {
-   $hwnd = (Get-Process msedge).MainWindowHandle
-   if ($hwnd -ne 0) {
-       # Hide window (0 = SW_HIDE)
-       [Win32]::ShowWindow($hwnd, 0)
-   } else {
-       Add-Content -Path $logpath -Value ((Get-Date -Format "yyyy/MM/dd HH:mm") + " Unable to hide window. Handle not found.")
-   }
-}
-# Function to show browser window
-function Show-Window {
-   $hwnd = (Get-Process msedge).MainWindowHandle
-   if ($hwnd -ne 0) {
-       # Show window (5 = SW_SHOW)
-       [Win32]::ShowWindow($hwnd, 5)
-       [Win32]::SetForegroundWindow($hwnd)
-   } else {
-       Add-Content -Path $logpath -Value ((Get-Date -Format "yyyy/MM/dd HH:mm") + " Unable to show window. Handle not found.")
-   }
-}
 
 # Function to wait until an element is visible
 function WaitForElement {
@@ -194,7 +173,7 @@ function Login-Default {
 ## Main script starts here - script will terminate if any errors are encountered ##
 #============================================================
 #         PSM Wrapper for Selenium webdriver
-#         -----------------------------------
+#          ---------------------------------------------------
 # Description : PSM Web Applications
 # Created : Nov 06, 2024
 # Abhishek Singh
@@ -211,26 +190,14 @@ $PathToFolder = 'D:\Program Files (x86)\CyberArk\PSM\Components'
 if ($env:Path -notcontains ";$PathToFolder" ) {
     $env:Path += ";$PathToFolder"
 }
-
 Add-Type -AssemblyName System.Windows.Forms
 Add-Type -AssemblyName System.Web
-# Load required Win32 APIs
-Add-Type @"
-using System;
-using System.Runtime.InteropServices;
-public class Win32 {
-   [DllImport("user32.dll")]
-   public static extern bool ShowWindow(IntPtr hWnd, int nCmdShow);
-   [DllImport("user32.dll")]
-   public static extern bool SetForegroundWindow(IntPtr hWnd);
-}
-"@
 
 ##-------------------------------------------
 ## MSEdge driver settings
 ##-------------------------------------------
 $EdgeOptions = New-Object OpenQA.Selenium.Edge.EdgeOptions
-$EdgeOptions.AddArgument('start-maximized')
+$EdgeOptions.AddArgument('start-minimized')
 $EdgeOptions.AddArgument('--ignore-certificate-errors')
 $EdgeOptions.AddArgument('--no-sandbox')
 $EdgeOptions.AddArgument('--disable-extensions')
@@ -273,17 +240,16 @@ Add-Content -Path $logpath -Value ((Get-Date -Format "yyyy/MM/dd HH:mm") + " Scr
 
 			
 # Start a Edge tab and load URL
-    
+  
 $EdgeOptions.AddArgument("--app=$FullLoginURL")
 $Driver = New-Object OpenQA.Selenium.Edge.EdgeDriver($EdgeOptions)
 Add-Content -Path $logpath -Value ((Get-Date -Format "yyyy/MM/dd HH:mm") + " Args: ${strUserName}, ${appName}, ${FullLoginURL}")
 
 Start-Sleep -Seconds 1
-Hide-Window
 
 If ($appName -match "Azure" -or $appName -match "Github" ) {
     $login = Login-Azure -UserName $strUserName -Password $strPwd -AppName $appName  
 } Else {
     $login = Login-Default -UserName $strUserName -Password $strPwd -AppName $appName
 }
-Show-Window
+
