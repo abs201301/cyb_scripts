@@ -1,3 +1,25 @@
+# Function to hide browser window
+function Hide-Window {
+   $hwnd = (Get-Process msedge).MainWindowHandle
+   if ($hwnd -ne 0) {
+       # Hide window (0 = SW_HIDE)
+       [Win32]::ShowWindow($hwnd, 0)
+   } else {
+       Add-Content -Path $logpath -Value ((Get-Date -Format "yyyy/MM/dd HH:mm") + " Unable to hide window. Handle not found.")
+   }
+}
+# Function to show browser window
+function Show-Window {
+   $hwnd = (Get-Process msedge).MainWindowHandle
+   if ($hwnd -ne 0) {
+       # Show window (5 = SW_SHOW)
+       [Win32]::ShowWindow($hwnd, 5)
+       [Win32]::SetForegroundWindow($hwnd)
+   } else {
+       Add-Content -Path $logpath -Value ((Get-Date -Format "yyyy/MM/dd HH:mm") + " Unable to show window. Handle not found.")
+   }
+}
+
 # Function to wait until an element is visible
 function WaitForElement {
     param (
@@ -41,9 +63,18 @@ function Login-Azure {
         $Password,
         $AppName
     )
-   Add-Content -Path $logpath -Value ((Get-Date -Format "yyyy/MM/dd HH:mm") + " Logging into Azure MyApps Portal")
+    If ($appName -match "Github") {
+        Add-Content -Path $logpath -Value ((Get-Date -Format "yyyy/MM/dd HH:mm") + " Logging into Github")
+        $continueText = WaitForElement -driver $Driver -timeoutInSeconds 20 -locatorValue "//*[text() = 'Continue']"
+        If ($continueText) {
+            $continueText.Click()   
+        }
+    } Else {
+        Add-Content -Path $logpath -Value ((Get-Date -Format "yyyy/MM/dd HH:mm") + " Logging into Azure MyApps Portal")
+    } 
+      
    try {
-        $usernameField = WaitForElement -driver $Driver -timeoutInSeconds 15 -locatorValue "//*[@id = 'i0116']"
+        $usernameField = WaitForElement -driver $Driver -timeoutInSeconds 20 -locatorValue "//*[@id = 'i0116']"
         If ($usernameField) {
             Add-Content -Path $logpath -Value ((Get-Date -Format "yyyy/MM/dd HH:mm") + " Found the username field")
             $usernameField.SendKeys($strUserName)
@@ -52,7 +83,7 @@ function Login-Azure {
 		    Add-Content -Path $logpath -Value ((Get-Date -Format "yyyy/MM/dd HH:mm") + " Username field not found")
 	    }
 
-        $submitButton = WaitForElement -driver $Driver -timeoutInSeconds 15 -locatorValue "//*[@type='submit' or @id='idSIButton9']"
+        $submitButton = WaitForElement -driver $Driver -timeoutInSeconds 20 -locatorValue "//*[@type='submit' or @id='idSIButton9']"
         if ($submitButton) {
 		    Add-Content -Path $logpath -Value ((Get-Date -Format "yyyy/MM/dd HH:mm") + " Found the submit button")
 		    $submitButton.Click()
@@ -61,7 +92,7 @@ function Login-Azure {
 		    Add-Content -Path $logpath -Value ((Get-Date -Format "yyyy/MM/dd HH:mm") + " Submit button not found")
 	    }
 
-        $passwordField = WaitForElement -driver $Driver -timeoutInSeconds 15 -locatorValue "//*[@id='i0118' or contains(@placeholder, 'Password')]"
+        $passwordField = WaitForElement -driver $Driver -timeoutInSeconds 20 -locatorValue "//*[@id='i0118' or contains(@placeholder, 'Password')]"
         if ($passwordField) {
 		    Add-Content -Path $logpath -Value ((Get-Date -Format "yyyy/MM/dd HH:mm") + " Found the password field")
 		    $passwordField.SendKeys($strPwd)
@@ -70,7 +101,7 @@ function Login-Azure {
 		    Add-Content -Path $logpath -Value ((Get-Date -Format "yyyy/MM/dd HH:mm") + " Password field not found")
 	    }
 
-        $submitButton = WaitForElement -driver $Driver -timeoutInSeconds 15 -locatorValue "//*[@type='submit' or @id='idSIButton9']"
+        $submitButton = WaitForElement -driver $Driver -timeoutInSeconds 20 -locatorValue "//*[@type='submit' or @id='idSIButton9']"
         if ($submitButton) {
 		    Add-Content -Path $logpath -Value ((Get-Date -Format "yyyy/MM/dd HH:mm") + " Found the submit button")
 		    $submitButton.Click()
@@ -79,7 +110,7 @@ function Login-Azure {
 		    Add-Content -Path $logpath -Value ((Get-Date -Format "yyyy/MM/dd HH:mm") + " Submit button not found")
 	    }
 
-        $submitButton = WaitForElement -driver $Driver -timeoutInSeconds 15 -locatorValue "//*[@type='submit' or @id='idSIButton9']"
+        $submitButton = WaitForElement -driver $Driver -timeoutInSeconds 20 -locatorValue "//*[@type='submit' or @id='idSIButton9']"
         if ($submitButton) {
 		    Add-Content -Path $logpath -Value ((Get-Date -Format "yyyy/MM/dd HH:mm") + " Found the submit button")
 		    $submitButton.Click()
@@ -94,7 +125,7 @@ function Login-Azure {
 	    Add-Content -Path $logpath -Value ((Get-Date -Format "yyyy/MM/dd HH:mm") + " Exception Message: $($_.Exception.Message)")
 	    EndScript 'Exception has occurred ' 1 
     } finally {
-	Add-Content -Path $logpath -Value ((Get-Date -Format "yyyy/MM/dd HH:mm") + " Script finished")
+	    Add-Content -Path $logpath -Value ((Get-Date -Format "yyyy/MM/dd HH:mm") + " Script finished")
     }	
         
 }
@@ -108,7 +139,7 @@ function Login-Default {
     Add-Content -Path $logpath -Value ((Get-Date -Format "yyyy/MM/dd HH:mm") + " Logging into ${appName}")
     try {
 	    # Locate username field by id, name, or placeholder
-	    $usernameField = WaitForElement -driver $Driver -timeoutInSeconds 10 -locatorValue $usernameXPath
+	    $usernameField = WaitForElement -driver $Driver -timeoutInSeconds 20 -locatorValue $usernameXPath
 
 	    If ($usernameField) {
 		    Write-Host "Found the username field."
@@ -122,7 +153,7 @@ function Login-Default {
 	    }
 
 	    # Locate password field by id, name, or placeholder
-	    $passwordField = WaitForElement -driver $Driver -timeoutInSeconds 10 -locatorValue $passwordXPath
+	    $passwordField = WaitForElement -driver $Driver -timeoutInSeconds 20 -locatorValue $passwordXPath
 
 	    if ($passwordField) {
 		    Write-Host "Found the password field."
@@ -136,7 +167,7 @@ function Login-Default {
 	    }
 
 	    # Locate and click the submit button
-	    $submitButton = WaitForElement -driver $Driver -timeoutInSeconds 10 -locatorValue $submitButtonXPath
+	    $submitButton = WaitForElement -driver $Driver -timeoutInSeconds 20 -locatorValue $submitButtonXPath
 	    if ($submitButton) {
 		    Write-Host "Found the submit button."
 		    Add-Content -Path $logpath -Value ((Get-Date -Format "yyyy/MM/dd HH:mm") + " Found the submit button")
@@ -154,7 +185,7 @@ function Login-Default {
 	    Add-Content -Path $logpath -Value ((Get-Date -Format "yyyy/MM/dd HH:mm") + " Exception Message: $($_.Exception.Message)")
 	    EndScript 'Exception has occurred ' 1 
     } finally {
-	Add-Content -Path $logpath -Value ((Get-Date -Format "yyyy/MM/dd HH:mm") + " Script finished")
+	    Add-Content -Path $logpath -Value ((Get-Date -Format "yyyy/MM/dd HH:mm") + " Script finished")
     }	
 }
 
@@ -163,7 +194,7 @@ function Login-Default {
 ## Main script starts here - script will terminate if any errors are encountered ##
 #============================================================
 #         PSM Wrapper for Selenium webdriver
-#          ---------------------------------
+#         -----------------------------------
 # Description : PSM Web Applications
 # Created : Nov 06, 2024
 # Abhishek Singh
@@ -183,16 +214,28 @@ if ($env:Path -notcontains ";$PathToFolder" ) {
 
 Add-Type -AssemblyName System.Windows.Forms
 Add-Type -AssemblyName System.Web
+# Load required Win32 APIs
+Add-Type @"
+using System;
+using System.Runtime.InteropServices;
+public class Win32 {
+   [DllImport("user32.dll")]
+   public static extern bool ShowWindow(IntPtr hWnd, int nCmdShow);
+   [DllImport("user32.dll")]
+   public static extern bool SetForegroundWindow(IntPtr hWnd);
+}
+"@
 
 ##-------------------------------------------
 ## MSEdge driver settings
 ##-------------------------------------------
 $EdgeOptions = New-Object OpenQA.Selenium.Edge.EdgeOptions
 $EdgeOptions.AddArgument('start-maximized')
-$EdgeOptions.AcceptInsecureCertificates = $True
+$EdgeOptions.AddArgument('--ignore-certificate-errors')
 $EdgeOptions.AddArgument('--no-sandbox')
-$EdgeOptions.AddArgument("useAutomationExtesion=false")
+$EdgeOptions.AddArgument('--disable-extensions')
 $EdgeOptions.AddArgument('--disable-gpu')
+$EdgeOptions.AddArgument('--InPrivate')
 $EdgeOptions.AddExcludedArgument('enable-automation')
 
 ##-------------------------------------------
@@ -215,9 +258,9 @@ $strPwd = [System.RunTime.InteropServices.Marshal]::PtrToStringAuto([System.RunT
 $FullLoginURL = "$strURL$strAddress"
 
 # Define the XPath expression to search by id, name, or placeholder
-$usernameXPath = "//input[@id='username' or @id='j_username' or contains(@placeholder, 'Username')]"
-$passwordXPath = "//input[@id='password' or @id='j_password' or contains(@placeholder, 'Password')]"
-$submitButtonXPath = "//*[@type='submit' or @id='login-submission-button' or @id='signIn']"
+$usernameXPath = "//*[@id='username' or contains(@id, '-input') or @id='j_username' or contains(@placeholder, 'Username')]"
+$passwordXPath = "//*[@id='password' or @type='password' or @id='j_password' or contains(@placeholder, 'Password')]"
+$submitButtonXPath = "//*[@type='submit' or @id='login-submission-button' or @id='signIn' or @id='signInBtn']"
 
 ##-------------------------------------------
 ## Script starts here
@@ -228,26 +271,19 @@ $submitButtonXPath = "//*[@type='submit' or @id='login-submission-button' or @id
 if (!(Test-Path $logpath -Type Leaf)) {New-Item -Path $logpath -Type File}
 Add-Content -Path $logpath -Value ((Get-Date -Format "yyyy/MM/dd HH:mm") + " Script started")
 
-if ($args.Count -lt 4) {
-	Add-Content -Path $logpath -Value ((Get-Date -Format "yyyy/MM/dd HH:mm") + " Missing arguments. <Address> <UserName> <Password> <AppName>")
-	EndScript
-}
 			
 # Start a Edge tab and load URL
-
-If ($appName -Match "Azure") {
-    $EdgeOptions.AddArgument('InPrivate')
-}
     
 $EdgeOptions.AddArgument("--app=$FullLoginURL")
 $Driver = New-Object OpenQA.Selenium.Edge.EdgeDriver($EdgeOptions)
-
+Add-Content -Path $logpath -Value ((Get-Date -Format "yyyy/MM/dd HH:mm") + " Args: ${strUserName}, ${appName}, ${FullLoginURL}")
 
 Start-Sleep -Seconds 1
-$attributesToCheck = @("id", "name", "placeholder")
+Hide-Window
 
-If ($appName -eq "Azure") {
-    $login = Login-Azure -UserName $strUserName -Password $strPwd -AppName $appName
+If ($appName -match "Azure" -or $appName -match "Github" ) {
+    $login = Login-Azure -UserName $strUserName -Password $strPwd -AppName $appName  
 } Else {
     $login = Login-Default -UserName $strUserName -Password $strPwd -AppName $appName
 }
+Show-Window
