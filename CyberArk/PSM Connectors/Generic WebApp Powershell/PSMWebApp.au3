@@ -4,9 +4,9 @@ AutoItSetOption("WinTitleMatchMode", 3) ; EXACT_MATCH!
 
 ;============================================================
 ;           Generic Web Portal
-;           ----------------------------------------------------------
+;           -------------------
 ; Description : PSM Dispatcher for Websites
-; Created : 06.11.2024
+; Created : 26.03.2025
 ; Abhishek Singh
 ; Developed and compiled in AutoIt 3.3.14.1
 ;============================================================
@@ -15,9 +15,15 @@ AutoItSetOption("WinTitleMatchMode", 3) ; EXACT_MATCH!
 
 #include "PSMGenericClientWrapper.au3"
 #include <GUIConstantsEx.au3>
+#include <WindowsConstants.au3>
+#include <ProgressConstants.au3>
+#include <ColorConstants.au3>
+#include <StaticConstants.au3>
 #include <AutoItConstants.au3>
 #include <Crypt.au3>
 #include <StringConstants.au3>
+#include <WinAPIFiles.au3>
+#include <WinAPISys.au3>
 #Include "Base64.au3"
 ;================================
 ; Consts & Globals
@@ -43,6 +49,7 @@ Global $WinText
 Global $FinalWindow
 Global $ConnectionClientPID = 0
 Global $iPID
+Global $Debug = "N"
 
 
 ;=======================================
@@ -93,6 +100,10 @@ Func FetchSessionProperties()
 	if (PSMGenericClient_GetSessionProperty("Script_Name", $Script_Name) <> $PSM_ERROR_SUCCESS) Then
 		Error(PSMGenericClient_PSMGetLastErrorString())
 	EndIf
+	
+	If (PSMGenericClient_GetSessionProperty("DEBUG", $Debug) <> $PSM_ERROR_SUCCESS) Then
+		$Debug = "N"
+	EndIf
 EndFunc
 
 ;=======================================
@@ -113,23 +124,26 @@ Func Main()
 	EndIf
 
 	FetchSessionProperties()
-	Global $DISPATCHER_NAME 			= $AppName
-	$ERROR_MESSAGE_TITLE  	= "PSM " & $DISPATCHER_NAME & " Dispatcher error message"
-	$LOG_MESSAGE_PREFIX 		= $DISPATCHER_NAME & " Dispatcher - "
+	$ERROR_MESSAGE_TITLE  	= "PSM " & $AppName & " Dispatcher error message"
+	$LOG_MESSAGE_PREFIX 		= $AppName & " Dispatcher - "
 	
-	MessageUserOn("PSM-" & $DISPATCHER_NAME & "-WebApp", "Starting " & $DISPATCHER_NAME & "...")
+	If Not Is($Debug) Then
+		HideWindow()
+	EndIf
+
 	LogWrite("Starting selenium wrapper")
 	
 	$ConnectionClientPID  = LaunchEdge()
-
 	LogWrite("Finished LoginProcess() successfully")
 	LogWrite("sending PID to PSM")
-	
+
+	If Not Is($Debug) Then
+		ShowWindow()
+	EndIf
 	If (PSMGenericClient_SendPID($ConnectionClientPID) <> $PSM_ERROR_SUCCESS) Then
 		Error(PSMGenericClient_PSMGetLastErrorString())
     EndIf
-
-	MessageUserOff()
+	
 	LogWrite("Terminating Dispatcher Utils Wrapper")
 	PSMGenericClient_Term()
 	
@@ -165,6 +179,53 @@ Func Error($ErrorMessage, $Code = -1)
 
 EndFunc
 
+Func Is($var)
+   $var = StringLower($var)
+   If $var == "yes" Or $var == "y" Or $var == "true" Then
+       Return True
+   EndIf
+   If $var == "no" Or $var == "n" Or $var == "false" Then
+       Return False
+   EndIf
+   Return False
+EndFunc
+
+Func HideWindow()
+
+	Global $hGUI, $screenWidth, $screenHeight, $sMessage, $labelWidth, $labelHeight, $labelX, $labelY, $hLabel, $progressWidth, $progressHeight, $progressX, $progressY, $hProgress, $hPercentage
+	$screenWidth = @DesktopWidth
+	$screenHeight = @DesktopHeight
+	$hGUI = GUICreate($LOG_MESSAGE_PREFIX, $screenWidth, $screenHeight, 0, 0, $WS_POPUP, $WS_EX_TOPMOST)
+	GUICtrlCreateLabel("", 0, 0, $screenWidth, $screenHeight)
+	GUICtrlSetBkColor(-1, 0x000000)
+	$sMessage = "Please wait while we log you in..."
+	$labelWidth = 400
+	$labelHeight = 40
+	$labelX = ($screenWidth - $labelWidth) / 2
+	$labelY = ($screenHeight - $labelHeight) / 2 - 50
+	$hLabel = GUICtrlCreateLabel($sMessage, $labelX, $labelY, $labelWidth, $labelHeight, $SS_CENTER)
+	GUICtrlSetFont($hLabel, 12, 700)
+	GUICtrlSetColor($hLabel, 0xFFFFFF)
+	GUICtrlSetBkColor($hLabel, 0x000000)
+	$progressWidth = 400
+	$progressHeight = 20
+	$progressX = ($screenWidth - $progressWidth) / 2
+	$progressY = $labelY + 50
+	$hProgress = GUICtrlCreateProgress($progressX, $progressY, $progressWidth, $progressHeight, $PBS_SMOOTH)
+	GUICtrlSetColor($hProgress, 0xFFFFFF)
+	$hPercentage = GUICtrlCreateLabel("0%", $progressX, $progressY - 25, $progressWidth, 20, $SS_CENTER)
+	GUICtrlSetFont($hPercentage, 12, 700)
+	GUICtrlSetColor($hPercentage, 0xFFFFFF)
+	GUICtrlSetBkColor($hPercentage, $GUI_BKCOLOR_TRANSPARENT)
+	GUISetState(@SW_SHOW)
+	
+EndFunc
+
+Func ShowWindow()
+	GUIDelete($hGUI)
+EndFunc
+	
+
 ; #FUNCTION# ====================================================================================================================
 ; Name...........: LogWrite
 ; Description ...: Write a Dispatcher log message to standard PSM log file         
@@ -183,23 +244,6 @@ Func AssertErrorLevel($error_code, $message, $code = -1)
 		LogWrite(StringFormat("AssertErrorLevel - %s :: @error = %d", $message, $error_code), $LOG_LEVEL_ERROR)
 		Error($message, $code)
 	EndIf
-EndFunc
-
-; #FUNCTION# ====================================================================================================================
-; Name...........: MessageUserOn
-; Description ...: Writes a message to the user, and keeps it indefinitely (until function call to MessageUserOff)
-; ===============================================================================================================================
-Func MessageUserOn(Const ByRef $msgTitle, Const ByRef $msgBody)
-	SplashOff()
-    SplashTextOn ($msgTitle, $msgBody, -1, 54, -1, -1, 0, "Tahoma", 9, -1)
-EndFunc
-
-; #FUNCTION# ====================================================================================================================
-; Name...........: MessageUserOff
-; Description ...: See SplashOff()
-; ===============================================================================================================================
-Func MessageUserOff()
-    SplashOff()
 EndFunc
 
 ; #FUNCTION# ====================================================================================================================
@@ -225,6 +269,9 @@ Func LaunchEdge()
 		Local $sUsername = $TargetUsername & "@<Domain>"
 		Local $sAddress = "myapps.microsoft.com"
 		$sPSCmd = $PS_EXE & " -File "& '"'&$sScript &'" ' & $sAddress & ' ' & $sUsername & ' ' & $AppName & ' ' & $encodedPassword
+	ElseIf $AppName = "Github" Then
+		Local $sUsername = $TargetUsername & "@<Domain>"
+		$sPSCmd = $PS_EXE & " -File "& '"'&$sScript &'" ' & $TargetAddress & ' ' & $sUsername & ' ' & $AppName & ' ' & $encodedPassword
 	Else
 		$sPSCmd = $PS_EXE & " -File "& '"'&$sScript &'" ' & $TargetAddress & ' ' & $TargetUsername & ' ' & $AppName & ' ' & $encodedPassword
 	EndIf
@@ -234,7 +281,7 @@ Func LaunchEdge()
 		$iPID = RunAs($TargetUsername, $TargetDomain, $TargetPassword, 2, @ComSpec & " /c " & $sPSCmd, @AppDataDir, @SW_HIDE, $STDERR_MERGED)
 		LogWrite("Creating browser session using RunAs capability")
 	Else
-		$iPID = Run(@ComSpec & " /k " & $sPSCmd, @AppDataDir, @SW_HIDE, $STDERR_MERGED)
+		$iPID = Run(@ComSpec & " /c " & $sPSCmd, @AppDataDir, @SW_HIDE, $STDERR_MERGED)
 		LogWrite("Creating browser session using Run capability")
 	EndIf
 	
@@ -242,8 +289,27 @@ Func LaunchEdge()
 		Error("Error running scipt: " & @error & " - " & PSMGenericClient_PSMGetLastErrorString())
 	EndIf
 	
+	If Not Is($Debug) Then
+		Local $progressDone = False
+		For $i = 1 To 100
+			If ProcessExists($iPID) Then
+				GUICtrlSetData($hProgress, $i / 2)
+				GUICtrlSetData($hPercentage, int($i / 2) & "%")
+				Sleep(75)
+			Else
+				$progressDone = True
+				ExitLoop
+			EndIf
+		Next
+	
+		If $progressDone = False Then
+			GUICtrlSetData($hProgress, 100)
+			GUICtrlSetData($hPercentage, "100%")
+		EndIf
+	EndIf
+
 	While ProcessExists($iPID)
-		Sleep(1000)
+		Sleep(500)
 	WEnd
 	
 	Local $CleanEnv = CleanEnv()
