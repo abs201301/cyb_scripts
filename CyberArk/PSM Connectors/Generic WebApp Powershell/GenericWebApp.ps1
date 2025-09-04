@@ -173,7 +173,7 @@ function Login-Default {
 ## Main script starts here - script will terminate if any errors are encountered ##
 #============================================================
 #         PSM Wrapper for Selenium webdriver
-#          ---------------------------------------------------
+#        -------------------------------------
 # Description : PSM Web Applications
 # Created : Nov 06, 2024
 # Abhishek Singh
@@ -197,7 +197,7 @@ Add-Type -AssemblyName System.Web
 ## MSEdge driver settings
 ##-------------------------------------------
 $EdgeOptions = New-Object OpenQA.Selenium.Edge.EdgeOptions
-$EdgeOptions.AddArgument('start-minimized')
+$EdgeOptions.AddArgument('start-maximized')
 $EdgeOptions.AddArgument('--ignore-certificate-errors')
 $EdgeOptions.AddArgument('--no-sandbox')
 $EdgeOptions.AddArgument('--disable-extensions')
@@ -225,9 +225,9 @@ $strPwd = [System.RunTime.InteropServices.Marshal]::PtrToStringAuto([System.RunT
 $FullLoginURL = "$strURL$strAddress"
 
 # Define the XPath expression to search by id, name, or placeholder
-$usernameXPath = "//*[@id='username' or contains(@id, '-input') or @id='j_username' or contains(@placeholder, 'Username')]"
+$usernameXPath = "//*[@id='username' or contains(@id, '-input') or @id='j_username' or @name='j_username' or contains(@placeholder, 'Username')]"
 $passwordXPath = "//*[@id='password' or @type='password' or @id='j_password' or contains(@placeholder, 'Password')]"
-$submitButtonXPath = "//*[@type='submit' or @id='login-submission-button' or @id='signIn' or @id='signInBtn']"
+$submitButtonXPath = "//*[@type='submit' or @id='login-submission-button' or @id='signIn' or @id='signInBtn' or @id='login-button-id']"
 
 ##-------------------------------------------
 ## Script starts here
@@ -239,7 +239,7 @@ if (!(Test-Path $logpath -Type Leaf)) {New-Item -Path $logpath -Type File}
 Add-Content -Path $logpath -Value ((Get-Date -Format "yyyy/MM/dd HH:mm") + " Script started")
 
 			
-# Start a Edge tab and load URL
+# Start Edge and load URL
   
 $EdgeOptions.AddArgument("--app=$FullLoginURL")
 $Driver = New-Object OpenQA.Selenium.Edge.EdgeDriver($EdgeOptions)
@@ -252,4 +252,3 @@ If ($appName -match "Azure" -or $appName -match "Github" ) {
 } Else {
     $login = Login-Default -UserName $strUserName -Password $strPwd -AppName $appName
 }
-
