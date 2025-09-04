@@ -1,6 +1,13 @@
 # Sync-ADPPA
 PowerShell automation to synchronize Active Directory (AD) Privileged Access (PPA) accounts with CyberArk, backed by an SQL database and ServiceNow integration for incident tracking.
 This script is designed to keep CyberArk safes and accounts aligned with AD and organizational policies while ensuring failures are logged, emailed, and tracked in ServiceNow
+The script uses following Powershell modules obtained from Powershell Gallery. 
+
+[SqlServer 22.2.0](https://www.powershellgallery.com/packages/SqlServer/22.2.0)
+
+[psPAS 5.2.54](https://www.powershellgallery.com/packages/psPAS/5.2.54)
+
+[dbatools 2.0.4](https://www.powershellgallery.com/packages/dbatools/2.0.4) (Optional)
 
 
 ## 📋 Features
@@ -23,18 +30,19 @@ This script is designed to keep CyberArk safes and accounts aligned with AD and 
 - Sends email alerts for errors with ServiceNow ticket references.
 
 ## ⚙️ Prerequisites
-- PowerShell 5.1+
-- Modules
-- psPAS for CyberArk API
-- Quest ARS PowerShell module (Connect-QADService)
-- CyberArk Components
-- CyberArk Vault & PVWA access
-- CyberArk Application Password SDK (CLIPasswordSDK64.exe)
-- SQL Server
-- Accessible instance with required tables and stored procedures (usp_GetSafesToCreate, usp_GetAccountsToAdd, usp_GetAccountsToRemove).
-- ServiceNow
-- Client ID and Secret stored in CyberArk.
-- Caller/Opened_by sys_id available.
+1. Powershell 5.1+
+2. Quest ARS Powershell module
+3. SQL Server accessible instance with required tables and stored procedures (usp_GetSafesToCreate, usp_GetAccountsToAdd, usp_GetAccountsToRemove)
+4. SQL Server Management Studio 20.1 (For UI experience)
+5. psPAS Powershell module (To invoke CyberArk REST API commands)
+6. SqlServer Powershell module (To invoke sqlcmd powershell cmdlets)
+7. DBATools Powershell module (A powerful alternative to SqlServer module)
+8. Remote Server Administration tools (To invoke Active Directory powershell cmdlets)
+9. CyberArk EVD (To export Vault data and import into various MSSQL tables)
+10. Sqlcmd tools (A mandatory program to get SqlServer module to work)
+11. Out-DataTable.ps1 wrapper (To write the output of Get-ADUser cmdlet in sql table)
+12. Client ID and Secret stored in CyberArk.
+13. Caller/Opened_by sys_id available.
 
 ## 🔑 Configuration
 Update variables in the script before use
