@@ -1,6 +1,7 @@
 # Sync-ADPPA
 PowerShell automation to synchronize Active Directory (AD) Privileged Access (PPA) accounts with CyberArk, backed by an SQL database and ServiceNow integration for incident tracking.
-This script is designed to keep CyberArk safes and accounts aligned with AD and organizational policies while ensuring failures are logged, emailed, and tracked in ServiceNow
+This script is designed to keep CyberArk safes and accounts aligned with AD and organizational policies while ensuring failures are logged, emailed, and tracked in ServiceNow.
+
 The script uses following Powershell modules obtained from Powershell Gallery. 
 
 [SqlServer 22.2.0](https://www.powershellgallery.com/packages/SqlServer/22.2.0)
