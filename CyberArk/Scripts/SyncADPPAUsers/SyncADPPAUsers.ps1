@@ -8,11 +8,11 @@ function Export-ADPPAtoSQL {
       Invoke-Sqlcmd -ServerInstance $SqlInstance -Database $DatabaseName -Query "TRUNCATE TABLE [dbo].[ADPPA]" -TrustServerCertificate
       .$outDataTablePath
       $users = @()
-      $searchOU = @($SApath, $SACANpath, $GNpath, $WApath)
+      $searchOU = @($SApath, $GNpath, $WApath)
       ForEach ($OU in $searchOU) {
         $users += Get-ADUser -Filter * -SearchBase $OU -Property samAccountName, Enabled
       }
-      $fusers = $users | Where-Object { $_.samAccountName -Match '^(?i)(sa|aa|na|ra|wa)\d{6}$' }
+      $fusers = $users | Where-Object { $_.samAccountName -Match '^(?i)(sa|aa|na|ra|wa)\d{8}$' }
       $list = $fusers | Select-Object Name,UserPrincipalName,samAccountName,Enabled | ConvertTo-CSV | ConvertFrom-Csv
       $cs = "Data Source=$SqlInstance;Initial Catalog=CyberArk;Integrated Security=True;TrustServerCertificate=True;"
       $bc = New-Object ("Data.SqlClient.SqlBulkCopy") $cs
