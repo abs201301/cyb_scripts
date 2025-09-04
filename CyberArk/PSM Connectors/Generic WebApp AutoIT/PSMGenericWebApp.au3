@@ -3,8 +3,8 @@ Opt("MustDeclareVars", 1)
 AutoItSetOption("WinTitleMatchMode", 3)
 
 ;============================================================
-;           Vermillion Web Portal
-;           ---------------------
+;            Web Portal
+;           ------------
 ; Description : PSM Dispatcher for Web applications
 ; Created : 30.08.2024
 ; Updated : 03.09.2025
