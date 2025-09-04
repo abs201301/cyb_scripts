@@ -4,49 +4,49 @@ This script is designed to keep CyberArk safes and accounts aligned with AD and 
 
 
 ## 📋 Features
-• AD to CyberArk Sync
-• Identifies eligible AD personal privileged accounts (SA, WA, NA, AA, RA) in defined OUs.
-• Creates missing safes and accounts in CyberArk.
-• Removes decommissioned/disabled accounts from CyberArk.
-• SQL Integration
-• Imports AD and CyberArk EVD data into SQL tables (CAFiles, CASafes, ADPPA) for reporting and reconciliation.
-• Falls back to CSV (EVD exports) if SQL is unavailable.
-• CyberArk API Integration
-• Creates safes with appropriate members and permissions.
-• Adds and reconciles accounts using psPAS.
-• Removes obsolete accounts and API users.
-• ServiceNow Integration
-• Uses OAuth Client ID/Secret (retrieved from CyberArk CP).
-• Automatically creates incidents for script failures with detailed exception information.
-• Notifications
-• Logs all actions to Sync-ADPPA.log.
-• Sends email alerts for errors with ServiceNow ticket references.
+- AD to CyberArk Sync
+- Identifies eligible AD personal privileged accounts (SA, WA, NA, AA, RA) in defined OUs.
+- Creates missing safes and accounts in CyberArk.
+- Removes decommissioned/disabled accounts from CyberArk.
+- SQL Integration
+- Imports AD and CyberArk EVD data into SQL tables (CAFiles, CASafes, ADPPA) for reporting and reconciliation.
+- Falls back to CSV (EVD exports) if SQL is unavailable.
+- CyberArk API Integration
+- Creates safes with appropriate members and permissions.
+- Adds and reconciles accounts using psPAS.
+- Removes obsolete accounts and API users.
+- ServiceNow Integration
+- Uses OAuth Client ID/Secret (retrieved from CyberArk CP).
+- Automatically creates incidents for script failures with detailed exception information.
+- Notifications
+- Logs all actions to Sync-ADPPA.log.
+- Sends email alerts for errors with ServiceNow ticket references.
 
 ## ⚙️ Prerequisites
-• PowerShell 5.1+
-• Modules
-• psPAS for CyberArk API
-• Quest ARS PowerShell module (Connect-QADService)
-• CyberArk Components
-• CyberArk Vault & PVWA access
-• CyberArk Application Password SDK (CLIPasswordSDK64.exe)
-• SQL Server
-• Accessible instance with required tables and stored procedures (usp_GetSafesToCreate, usp_GetAccountsToAdd, usp_GetAccountsToRemove).
-• ServiceNow
-• Client ID and Secret stored in CyberArk.
-• Caller/Opened_by sys_id available.
+- PowerShell 5.1+
+- Modules
+- psPAS for CyberArk API
+- Quest ARS PowerShell module (Connect-QADService)
+- CyberArk Components
+- CyberArk Vault & PVWA access
+- CyberArk Application Password SDK (CLIPasswordSDK64.exe)
+- SQL Server
+- Accessible instance with required tables and stored procedures (usp_GetSafesToCreate, usp_GetAccountsToAdd, usp_GetAccountsToRemove).
+- ServiceNow
+- Client ID and Secret stored in CyberArk.
+- Caller/Opened_by sys_id available.
 
 ## 🔑 Configuration
 Update variables in the script before use
 ## 🚀 Execution
 Run the script on the automation server: .\SyncADPPA.ps1
 
-• Logs are written to: .\Sync-ADPPA.log
-• Successful runs end with Synchronization finished.
-• Failures:
-• Logged in the log file.
-• Email alert sent to PAM team.
-• ServiceNow ticket created.
+- Logs are written to: .\Sync-ADPPA.log
+- Successful runs end with Synchronization finished.
+- Failures:
+-- Logged in the log file.
+-- Email alert sent to PAM team.
+--ServiceNow ticket created.
 
 ## 🧩 Script Flow
 1. Initialization
