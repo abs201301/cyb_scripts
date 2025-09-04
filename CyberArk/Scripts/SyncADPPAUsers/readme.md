@@ -46,47 +46,47 @@ Run the script on the automation server: .\SyncADPPA.ps1
 - Failures:
 -- Logged in the log file.
 -- Email alert sent to PAM team.
---ServiceNow ticket created.
+-- ServiceNow ticket created.
 
 ## 🧩 Script Flow
 1. Initialization
-• Connects to CyberArk (API session).
-• Connects to Quest ARS.
-• Retrieves credentials from CyberArk CP.
+- Connects to CyberArk (API session).
+- Connects to Quest ARS.
+- Retrieves credentials from CyberArk CP.
 2. Data Load
-• Truncates SQL tables and imports fresh AD/EVD data.
-• Falls back to CSV export if SQL unavailable.
+- Truncates SQL tables and imports fresh AD/EVD data.
+- Falls back to CSV export if SQL unavailable.
 3. Reconciliation
-• Creates missing safes.
-• Adds missing accounts to CyberArk.
-• Removes obsolete/disabled accounts.
-• Removes API user from safes if required.
+- Creates missing safes.
+- Adds missing accounts to CyberArk.
+- Removes obsolete/disabled accounts.
+- Removes API user from safes if required.
 4. Error Handling
-• Exceptions logged with full stack trace.
-• ServiceNow ticket raised.
-• Email alert sent to PAM team.
+- Exceptions logged with full stack trace.
+- ServiceNow ticket raised.
+- Email alert sent to PAM team.
 5. Cleanup
-• Closes API sessions and disconnects ARS.
-• Writes completion entry to log.
+- Closes API sessions and disconnects ARS.
+- Writes completion entry to log.
 
 ## 📌 Notes
-• Regex Rules
-• AD accounts: ^(?i)(sa|aa|na|ra|wa)\d{8}$
-• Safes: ^A\d{8}-Admins$
-• CyberArk accounts: ^acme-[ANRSW]A\d{8}$
-• ServiceNow Fields
-• caller_id and opened_by must be valid sys_ids.
-• cmdb_ci must map to a CI in ServiceNow.
-• Security
-• No credentials are hardcoded — all secrets are retrieved dynamically from CyberArk CP.
+- Regex Rules
+- AD accounts: ^(?i)(sa|aa|na|ra|wa)\d{8}$
+- Safes: ^A\d{8}-Admins$
+- CyberArk accounts: ^acme-[ANRSW]A\d{8}$
+- ServiceNow Fields
+- caller_id and opened_by must be valid sys_ids.
+- cmdb_ci must map to a CI in ServiceNow.
+- Security
+- No credentials are hardcoded — all secrets are retrieved dynamically from CyberArk CP.
 
 ## 🛠️ Troubleshooting
-• SQL Connection Failure
-• Falls back to CSV mode, check EVD exports.
-• ServiceNow Ticket Not Created
-• Verify OAuth client in CyberArk CP.
-• Check $sys_id values.
-• CyberArk API Errors
-• Ensure psPAS module is installed and PVWA accessible.
-• Confirm API user permissions.
+- SQL Connection Failure
+- Falls back to CSV mode, check EVD exports.
+- ServiceNow Ticket Not Created
+- Verify OAuth client in CyberArk CP.
+- Check $sys_id values.
+- CyberArk API Errors
+- Ensure psPAS module is installed and PVWA accessible.
+- Confirm API user permissions.
 
