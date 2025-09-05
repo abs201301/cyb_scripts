@@ -56,11 +56,6 @@ $Xpaths = @{
    Designer = 'slc-header-tab-Designer'
 }
 
-function Log {
-   param([string]$Message, [string]$Level = "INFO")
-   $timestamp = (Get-Date).ToString("yyyy-MM-dd HH:mm:ss")
-   Write-Output "$timestamp [$Level] $Message"
-}
 ##-------------------------------------------
 ## Helper Functions
 ##-------------------------------------------
@@ -74,14 +69,10 @@ function Set-UIAccess {
    $Encoded = [System.Text.Encoding]::UTF8.GetBytes($auth)
    $authorizationInfo = [System.Convert]::ToBase64String($Encoded)
    $headers = @{ "Authorization" = "Basic $authorizationInfo" }
-   $body = @{ ui_access = $Enable } | ConvertTo-Json -Compress
+   $body = @{ ui_access = $Enable }
    try {
-       Invoke-WebRequest -Uri $APIURL -UseBasicParsing `
-           -Method Put `
-           -Headers $headers `
-           -ContentType "application/json" `
-           -Body $body | Out-Null
-       Log "UI access set to $Enable for $User"
+       Invoke-WebRequest -Uri $APIURL -UseBasicParsing -Method Put -Credential $credential -Headers $headers -ContentType "application/json" -Body $body -ErrorAction | Out-Null
+       Write-Output "UI access set to $Enable for $User"
    }
    catch {
        throw "Failed to set UI access ($Enable): $($_.Exception.Message)"
@@ -108,20 +99,17 @@ function WaitForElement {
 }
 function EndScript {
    param(
-       [string]$Output,
-       [switch]$NoLogout
+       $Output,$Logout
    )
-   if (-not $NoLogout) {
-       try {
-           $ChromeDriver.Url = $LogoutURL
-           Start-Sleep -Seconds 1
-       } catch {}
+   If ($ChromeDriver) {
+    try {
+        if ($Logout -ne "1") {
+            try { $ChromeDriver.Url = $LogoutURL; Start-Sleep -Seconds 1 } catch {}
+        }
+        $ChromeDriver.Quit()
+    } catch {}
    }
-   try {
-       $ChromeDriver.Close()
-       $ChromeDriver.Quit()
-   } catch {}
-   Log $Output
+   Write-Output $Output
    return 'PowerShell Script Ended'
 }
 ##-------------------------------------------
@@ -133,43 +121,43 @@ if ($VerifyLogon -eq '1') {
 switch ($ActionName) {
    "verifypass" {
        try { Set-UIAccess -User $UserName -Pass $CurrentPwd -Enable $true }
-       catch { EndScript "Failed to enable UI access: $_" -NoLogout; return }
+       catch { EndScript "Failed to enable UI access: $_" 1 }
        $ChromeDriver = New-Object OpenQA.Selenium.Chrome.ChromeDriver($ChromeOptions)
        $ChromeDriver.Url = $BaseURL
        try {
-           $UsernameField = WaitForElement -driver $ChromeDriver -TimeoutSec 20 -XPath $Xpaths.Username
+           $UsernameField = WaitForElement -Driver $ChromeDriver -XPath $Xpaths.Username -TimeoutSec 20
            If ($UsernameField) { $UsernameField.SendKeys($UserName) }
-           $PasswordField = WaitForElement -driver $ChromeDriver -TimeoutSec 20 -XPath $Xpaths.Password
+           $PasswordField = WaitForElement -Driver $ChromeDriver -XPath $Xpaths.Password -TimeoutSec 20
            If ($PasswordField) { $PasswordField.SendKeys($CurrentPwd) }
-           $SubmitButton = WaitForElement -driver $ChromeDriver -TimeoutSec 20 -XPath $Xpaths.Submit
+           $SubmitButton = WaitForElement -Driver $ChromeDriver -XPath $Xpaths.Submit -TimeoutSec 20
            If ($SubmitButton) { $SubmitButton.Click() }
-           Wait-ForElement -Driver $ChromeDriver -XPath "//*[@id='$($Xpaths.Designer)']"
+           WaitForElement -Driver $ChromeDriver -XPath "//*[@id='$($Xpaths.Designer)']"
        }
-       catch { EndScript "403 - Forbidden: $_" -NoLogout; return }
+       catch { EndScript "403 - Forbidden: $_" 1 }
        Set-UIAccess -User $UserName -Pass $CurrentPwd -Enable $false
        EndScript '200 - Connect Success'
    }
    "changepass" {
        try { Set-UIAccess -User $UserName -Pass $CurrentPwd -Enable $true }
-       catch { EndScript "Failed to enable UI access: $_" -NoLogout; return }
+       catch { EndScript "Failed to enable UI access: $_" 1 }
        $ChromeDriver = New-Object OpenQA.Selenium.Chrome.ChromeDriver($ChromeOptions)
        $ChromeDriver.Url = $ChgPassURL
        try {
-           $PasswordField = WaitForElement -driver $ChromeDriver -TimeoutSec 20 -XPath $Xpaths.Password
+           $PasswordField = WaitForElement -Driver $ChromeDriver -XPath $Xpaths.Password -TimeoutSec 20
            If ($PasswordField) { $PasswordField.SendKeys($CurrentPwd) }
-           $NewPasswordField = WaitForElement -driver $ChromeDriver -TimeoutSec 20 -XPath $Xpaths.NewPass
+           $NewPasswordField = WaitForElement -Driver $ChromeDriver -XPath $Xpaths.NewPass -TimeoutSec 20
            If ($NewPasswordField) { $NewPasswordField.SendKeys($NewPwd) }
-           $ConfirmPasswordField = WaitForElement -driver $ChromeDriver -TimeoutSec 20 -XPath $Xpaths.Confirm
+           $ConfirmPasswordField = WaitForElement -Driver $ChromeDriver -XPath $Xpaths.Confirm -TimeoutSec 20
            If ($ConfirmPasswordField) { $ConfirmPasswordField.SendKeys($NewPwd) }
-           $SubmitButton = WaitForElement -driver $ChromeDriver -TimeoutSec 20 -XPath $Xpaths.Submit
+           $SubmitButton = WaitForElement -Driver $ChromeDriver -XPath $Xpaths.Submit -TimeoutSec 20
            If ($SubmitButton) { $SubmitButton.Click() }
-           Wait-ForElement -Driver $ChromeDriver -XPath "//*[@id='$($Xpaths.Designer)']" -TimeoutSec 20
+           WaitForElement -Driver $ChromeDriver -XPath "//*[@id='$($Xpaths.Designer)']" -TimeoutSec 20
        }
-       catch { EndScript "403 - Forbidden: $_" -NoLogout; return }
+       catch { EndScript "403 - Forbidden: $_" 1 }
        Set-UIAccess -User $UserName -Pass $NewPwd -Enable $false
        EndScript '200 - Change Password Success'
    }
    default {
-       EndScript '404 - Not Found' -NoLogout
+       EndScript '404 - Not Found' 1
    }
 }
