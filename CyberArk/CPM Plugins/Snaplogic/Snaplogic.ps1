@@ -56,6 +56,11 @@ $Xpaths = @{
    Designer = 'slc-header-tab-Designer'
 }
 
+function Log {
+   param([string]$Message, [string]$Level = "INFO")
+   $timestamp = (Get-Date).ToString("yyyy-MM-dd HH:mm:ss")
+   Write-Output "$timestamp [$Level] $Message"
+}
 ##-------------------------------------------
 ## Helper Functions
 ##-------------------------------------------
@@ -88,13 +93,18 @@ function WaitForElement {
        [string]$XPath,
        [int]$TimeoutSec = 15
    )
-   try {
-           $wait = New-Object OpenQA.Selenium.Support.UI.WebDriverWait($Driver, [System.TimeSpan]::FromSeconds($TimeoutSec))
-           $condition = [OpenQA.Selenium.Support.UI.ExpectedConditions]::ElementIsVisible([OpenQA.Selenium.By]::XPath($XPath))
-           return $wait.Until($condition)
-       } catch {
-           return $null
-       }
+   $wait = New-Object OpenQA.Selenium.Support.UI.WebDriverWait($Driver, [System.TimeSpan]::FromSeconds($TimeoutSec))
+   for ($i = 0; $i -lt $TimeoutSec * 4; $i++) {
+       Start-Sleep -Milliseconds 250
+       try {
+		   $element = $Driver.FindElement([OpenQA.Selenium.By]::Xpath($XPath))
+           if ($element.Displayed) {
+               return $element
+           }
+        } catch {
+            continue
+        }
+    }
 }
 function EndScript {
    param(
