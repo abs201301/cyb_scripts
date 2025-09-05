@@ -73,10 +73,9 @@ function Set-UIAccess {
    $Encoded = [System.Text.Encoding]::UTF8.GetBytes($auth)
    $authorizationInfo = [System.Convert]::ToBase64String($Encoded)
    $headers = @{ "Authorization" = "Basic $authorizationInfo" }
-   $body = @{ ui_access = $Enable }
+   $body = "{ `"ui_access`": $([System.Convert]::ToString($Enable).ToLower()) }"
    try {
-       Invoke-WebRequest -Uri $APIURL -UseBasicParsing -Method Put -Credential $credential -Headers $headers -ContentType "application/json" -Body $body -ErrorAction stop | Out-Null
-       Write-Output "UI access set to $Enable for $User"
+       $res = Invoke-WebRequest -Uri $APIURL -UseBasicParsing -Method Put -Headers $headers -ContentType "application/json" -Body $body -ErrorAction stop | Out-Null
    }
    catch {
        throw "Failed to set UI access ($Enable): $($_.Exception.Message)"
@@ -135,7 +134,7 @@ switch ($ActionName) {
            If ($PasswordField) { $PasswordField.SendKeys($CurrentPwd) }
            $SubmitButton = WaitForElement -Driver $ChromeDriver -XPath $Xpaths.Submit -TimeoutSec 20
            If ($SubmitButton) { $SubmitButton.Click() }
-           WaitForElement -Driver $ChromeDriver -XPath "//*[@id='$($Xpaths.Designer)']"
+           $Validation = WaitForElement -Driver $ChromeDriver -XPath "//*[@id='$($Xpaths.Designer)']"
        }
        catch { EndScript "403 - Forbidden: $_" 1 }
        Set-UIAccess -User $UserName -Pass $CurrentPwd -Enable $false
@@ -155,7 +154,7 @@ switch ($ActionName) {
            If ($ConfirmPasswordField) { $ConfirmPasswordField.SendKeys($NewPwd) }
            $SubmitButton = WaitForElement -Driver $ChromeDriver -XPath $Xpaths.Submit -TimeoutSec 20
            If ($SubmitButton) { $SubmitButton.Click() }
-           WaitForElement -Driver $ChromeDriver -XPath "//*[@id='$($Xpaths.Designer)']" -TimeoutSec 20
+           $Validation = WaitForElement -Driver $ChromeDriver -XPath "//*[@id='$($Xpaths.Designer)']" -TimeoutSec 20
        }
        catch { EndScript "403 - Forbidden: $_" 1 }
        Set-UIAccess -User $UserName -Pass $NewPwd -Enable $false
