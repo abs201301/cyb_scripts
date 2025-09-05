@@ -82,7 +82,7 @@ function Set-UIAccess {
        throw "Failed to set UI access ($Enable): $($_.Exception.Message)"
    }
 }
-function Wait-ForElement {
+function WaitForElement {
    param(
        [object]$Driver,
        [string]$XPath,
@@ -137,7 +137,7 @@ switch ($ActionName) {
            $PasswordField = WaitForElement -driver $ChromeDriver -TimeoutSec 20 -XPath $Xpaths.Password
            If ($PasswordField) { $PasswordField.SendKeys($CurrentPwd) }
            $SubmitButton = WaitForElement -driver $ChromeDriver -TimeoutSec 20 -XPath $Xpaths.Submit
-           If ($SubmitBurron) { $SubmitButton.Click() }
+           If ($SubmitButton) { $SubmitButton.Click() }
            Wait-ForElement -Driver $ChromeDriver -XPath "//*[@id='$($Xpaths.Designer)']"
        }
        catch { EndScript "403 - Forbidden: $_" -NoLogout; return }
@@ -150,7 +150,7 @@ switch ($ActionName) {
        $ChromeDriver = New-Object OpenQA.Selenium.Chrome.ChromeDriver($ChromeOptions)
        $ChromeDriver.Url = $ChgPassURL
        try {
-           $CurrentPasswordField = WaitForElement -driver $ChromeDriver -TimeoutSec 20 -XPath $Xpaths.Password
+           $PasswordField = WaitForElement -driver $ChromeDriver -TimeoutSec 20 -XPath $Xpaths.Password
            If ($PasswordField) { $PasswordField.SendKeys($CurrentPwd) }
            $NewPasswordField = WaitForElement -driver $ChromeDriver -TimeoutSec 20 -XPath $Xpaths.NewPass
            If ($NewPasswordField) { $NewPasswordField.SendKeys($NewPwd) }
