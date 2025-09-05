@@ -14,6 +14,7 @@
 ##-------------------------------------------
 ## Load Dependencies
 ##-------------------------------------------
+$ErrorActionPreference = "stop"
 $PathToFolder = 'D:\Program Files (x86)\CyberArk\Password Manager\bin'
 [System.Reflection.Assembly]::LoadFrom("$PathToFolder\WebDriver.dll") | Out-Null
 if ($env:Path -notcontains ";$PathToFolder") { $env:Path += ";$PathToFolder" }
@@ -22,6 +23,9 @@ Add-Type -AssemblyName System.Web
 ##-------------------------------------------
 ## Chrome driver settings
 ##-------------------------------------------
+$ChromeService = [OpenQA.Selenium.Chrome.ChromeDriverService]::CreateDefaultService()
+$ChromeService.SuppressInitialDiagnosticInformation = $true
+$ChromeService.HideCommandPromptWindow = $true
 $ChromeOptions = New-Object OpenQA.Selenium.Chrome.ChromeOptions
 $ChromeOptions.AddArgument('start-maximized')
 $ChromeOptions.AcceptInsecureCertificates = $true
@@ -71,7 +75,7 @@ function Set-UIAccess {
    $headers = @{ "Authorization" = "Basic $authorizationInfo" }
    $body = @{ ui_access = $Enable }
    try {
-       Invoke-WebRequest -Uri $APIURL -UseBasicParsing -Method Put -Credential $credential -Headers $headers -ContentType "application/json" -Body $body -ErrorAction | Out-Null
+       Invoke-WebRequest -Uri $APIURL -UseBasicParsing -Method Put -Credential $credential -Headers $headers -ContentType "application/json" -Body $body -ErrorAction stop | Out-Null
        Write-Output "UI access set to $Enable for $User"
    }
    catch {
@@ -122,7 +126,7 @@ switch ($ActionName) {
    "verifypass" {
        try { Set-UIAccess -User $UserName -Pass $CurrentPwd -Enable $true }
        catch { EndScript "Failed to enable UI access: $_" 1 }
-       $ChromeDriver = New-Object OpenQA.Selenium.Chrome.ChromeDriver($ChromeOptions)
+       $ChromeDriver = New-Object OpenQA.Selenium.Chrome.ChromeDriver($ChromeService,$ChromeOptions)
        $ChromeDriver.Url = $BaseURL
        try {
            $UsernameField = WaitForElement -Driver $ChromeDriver -XPath $Xpaths.Username -TimeoutSec 20
@@ -140,7 +144,7 @@ switch ($ActionName) {
    "changepass" {
        try { Set-UIAccess -User $UserName -Pass $CurrentPwd -Enable $true }
        catch { EndScript "Failed to enable UI access: $_" 1 }
-       $ChromeDriver = New-Object OpenQA.Selenium.Chrome.ChromeDriver($ChromeOptions)
+       $ChromeDriver = New-Object OpenQA.Selenium.Chrome.ChromeDriver($ChromeService,$ChromeOptions)
        $ChromeDriver.Url = $ChgPassURL
        try {
            $PasswordField = WaitForElement -Driver $ChromeDriver -XPath $Xpaths.Password -TimeoutSec 20
