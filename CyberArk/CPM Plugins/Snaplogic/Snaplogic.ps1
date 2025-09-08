@@ -33,7 +33,7 @@ $ChromeOptions.AddArgument('--ignore-certificate-errors')
 $ChromeOptions.AddArgument('--no-sandbox')
 $ChromeOptions.AddArgument('--Incognito')
 $ChromeOptions.AddArgument('--disable-gpu')
-#$ChromeOptions.AddArgument('--headless=new') #Comment this for debugging. CPM runs in headless mode!
+$ChromeOptions.AddArgument('--headless=new') #Comment this for debugging. CPM runs in headless mode!
 
 ##-------------------------------------------
 ## Init Variables
@@ -177,7 +177,10 @@ switch ($ActionName) {
    }
    "changepass" {
        try {
-           $res = Set-UIAccess -User $UserName -Pass $CurrentPwd -Enable $true
+           $null = Set-UIAccess -User $UserName -Pass $CurrentPwd -Enable $true
+           if (-not (Wait-ForUIAccess -User $UserName -Pass $CurrentPwd -Expected $true -TimeoutSec 20)) {
+              EndScript 'Failed to set ui_access' 1
+           }
        } catch {
            EndScript 'Failed to set ui_access' 1
        }
