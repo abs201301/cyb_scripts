@@ -55,6 +55,7 @@ $Xpaths = @{
    Username = '//*[@id="login-content"]/div/div[2]/div[2]/form/div[1]/div[2]/input'
    Password = '//*[@id="login-content"]/div/div[2]/div[2]/form/div[2]/div[2]/input'
    Submit   = '//*[@id="login-content"]/div/div[2]/div[2]/form/button'
+   OldPass  = '//*[@id="login-content"]/div/div[2]/div[2]/form/div[1]/div[2]/input'
    NewPass  = '//*[@id="login-content"]/div/div[2]/div[2]/form/div[2]/div/div[2]/input'
    Confirm  = '//*[@id="login-content"]/div/div[2]/div[2]/form/div[3]/div/div[2]/input'
    Designer = 'slc-header-tab-Designer'
@@ -69,18 +70,15 @@ function Set-UIAccess {
        [string]$Pass,
        [bool]$Enable
    )
-   $auth = "${User}:${Pass}"
-   $Encoded = [System.Text.Encoding]::UTF8.GetBytes($auth)
-   $authorizationInfo = [System.Convert]::ToBase64String($Encoded)
-   $headers = @{ "Authorization" = "Basic $authorizationInfo" }
-   $body = "{ `"ui_access`": $([System.Convert]::ToString($Enable).ToLower()) }"
-   try {
-       $res = Invoke-WebRequest -Uri $APIURL -UseBasicParsing -Method Put -Headers $headers -ContentType "application/json" -Body $body -ErrorAction stop | Out-Null
+   [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
+   $auth = [Convert]::ToBase64String([System.Text.Encoding]::UTF8.GetBytes("${User}:${Pass}"))
+   $headers = @{
+     "Authorization" = "Basic $auth"
    }
-   catch {
-       throw "Failed to set UI access ($Enable): $($_.Exception.Message)"
-   }
+   $body = @{"ui_access" = $Enable} | ConvertTo-Json
+   $response = Invoke-WebRequest -Uri $APIURL -UseBasicParsing -Method Put -Headers $headers -ContentType "Application/JSON" -Body $body -ErrorAction stop | Out-Null
 }
+
 function WaitForElement {
    param(
        [object]$Driver,
@@ -99,6 +97,7 @@ function WaitForElement {
             continue
         }
     }
+    return $null
 }
 function EndScript {
    param(
@@ -123,41 +122,57 @@ if ($VerifyLogon -eq '1') {
 }
 switch ($ActionName) {
    "verifypass" {
-       try { Set-UIAccess -User $UserName -Pass $CurrentPwd -Enable $true }
-       catch { EndScript "Failed to enable UI access: $_" 1 }
-       $ChromeDriver = New-Object OpenQA.Selenium.Chrome.ChromeDriver($ChromeService,$ChromeOptions)
-       $ChromeDriver.Url = $BaseURL
        try {
-           $UsernameField = WaitForElement -Driver $ChromeDriver -XPath $Xpaths.Username -TimeoutSec 20
-           If ($UsernameField) { $UsernameField.SendKeys($UserName) }
-           $PasswordField = WaitForElement -Driver $ChromeDriver -XPath $Xpaths.Password -TimeoutSec 20
-           If ($PasswordField) { $PasswordField.SendKeys($CurrentPwd) }
-           $SubmitButton = WaitForElement -Driver $ChromeDriver -XPath $Xpaths.Submit -TimeoutSec 20
-           If ($SubmitButton) { $SubmitButton.Click() }
-           $Validation = WaitForElement -Driver $ChromeDriver -XPath "//*[@id='$($Xpaths.Designer)']"
+           $res = Set-UIAccess -User $UserName -Pass $CurrentPwd -Enable $true
+       } catch {
+           EndScript 'Failed to set ui_access' 1
        }
-       catch { EndScript "403 - Forbidden: $_" 1 }
-       Set-UIAccess -User $UserName -Pass $CurrentPwd -Enable $false
+       try {
+           $ChromeDriver = New-Object OpenQA.Selenium.Chrome.ChromeDriver($ChromeService,$ChromeOptions)
+           $ChromeDriver.Url = $BaseURL
+           $UsernameField = WaitForElement -Driver $ChromeDriver -XPath $Xpaths.Username -TimeoutSec 20
+           If ($UsernameField) { $UsernameField.SendKeys($UserName) } else { EndScript 'Unable to connect to the remote server' 1 }
+           $PasswordField = WaitForElement -Driver $ChromeDriver -XPath $Xpaths.Password -TimeoutSec 20
+           If ($PasswordField) { $PasswordField.SendKeys($CurrentPwd) } else { EndScript 'Unable to connect to the remote server' 1 }
+           $SubmitButton = WaitForElement -Driver $ChromeDriver -XPath $Xpaths.Submit -TimeoutSec 20
+           If ($SubmitButton) { $SubmitButton.Click() } else { EndScript 'Unable to connect to the remote server' 1 }
+           $Validation = WaitForElement -Driver $ChromeDriver -XPath "//*[@id='$($Xpaths.Designer)']" -TimeoutSec 20
+           if (-not $Validation) { EndScript '403 - Forbidden' 1 }
+       }
+       catch { EndScript '403 - Forbidden' 1 }
+       try {
+           $res = Set-UIAccess -User $UserName -Pass $CurrentPwd -Enable $false
+       } catch {
+           EndScript 'Failed to set ui_access' 1
+       }
        EndScript '200 - Connect Success'
    }
    "changepass" {
-       try { Set-UIAccess -User $UserName -Pass $CurrentPwd -Enable $true }
-       catch { EndScript "Failed to enable UI access: $_" 1 }
-       $ChromeDriver = New-Object OpenQA.Selenium.Chrome.ChromeDriver($ChromeService,$ChromeOptions)
-       $ChromeDriver.Url = $ChgPassURL
        try {
-           $PasswordField = WaitForElement -Driver $ChromeDriver -XPath $Xpaths.Password -TimeoutSec 20
-           If ($PasswordField) { $PasswordField.SendKeys($CurrentPwd) }
-           $NewPasswordField = WaitForElement -Driver $ChromeDriver -XPath $Xpaths.NewPass -TimeoutSec 20
-           If ($NewPasswordField) { $NewPasswordField.SendKeys($NewPwd) }
-           $ConfirmPasswordField = WaitForElement -Driver $ChromeDriver -XPath $Xpaths.Confirm -TimeoutSec 20
-           If ($ConfirmPasswordField) { $ConfirmPasswordField.SendKeys($NewPwd) }
-           $SubmitButton = WaitForElement -Driver $ChromeDriver -XPath $Xpaths.Submit -TimeoutSec 20
-           If ($SubmitButton) { $SubmitButton.Click() }
-           $Validation = WaitForElement -Driver $ChromeDriver -XPath "//*[@id='$($Xpaths.Designer)']" -TimeoutSec 20
+           $res = Set-UIAccess -User $UserName -Pass $CurrentPwd -Enable $true
+       } catch {
+           EndScript 'Failed to set ui_access' 1
        }
-       catch { EndScript "403 - Forbidden: $_" 1 }
-       Set-UIAccess -User $UserName -Pass $NewPwd -Enable $false
+       try {
+           $ChromeDriver = New-Object OpenQA.Selenium.Chrome.ChromeDriver($ChromeService,$ChromeOptions)
+           $ChromeDriver.Url = $ChgPassURL
+           $PasswordField = WaitForElement -Driver $ChromeDriver -XPath $Xpaths.OldPass -TimeoutSec 20
+           If ($PasswordField) { $PasswordField.SendKeys($CurrentPwd) } else { EndScript 'Unable to connect to the remote server' 1 }
+           $NewPasswordField = WaitForElement -Driver $ChromeDriver -XPath $Xpaths.NewPass -TimeoutSec 20
+           If ($NewPasswordField) { $NewPasswordField.SendKeys($NewPwd) } else { EndScript 'Unable to connect to the remote server' 1 }
+           $ConfirmPasswordField = WaitForElement -Driver $ChromeDriver -XPath $Xpaths.Confirm -TimeoutSec 20
+           If ($ConfirmPasswordField) { $ConfirmPasswordField.SendKeys($NewPwd) } else { EndScript 'Unable to connect to the remote server' 1 }
+           $SubmitButton = WaitForElement -Driver $ChromeDriver -XPath $Xpaths.Submit -TimeoutSec 20
+           If ($SubmitButton) { $SubmitButton.Click() } else { EndScript 'Unable to connect to the remote server' 1 }
+           $Validation = WaitForElement -Driver $ChromeDriver -XPath "//*[@id='$($Xpaths.Designer)']" -TimeoutSec 20
+           if (-not $Validation) { EndScript '403 - Forbidden' 1 }
+       }
+       catch { EndScript '403 - Forbidden' 1 }
+       try {
+           $res = Set-UIAccess -User $UserName -Pass $NewPwd -Enable $false
+       } catch {
+           EndScript 'Failed to set ui_access' 1
+       }
        EndScript '200 - Change Password Success'
    }
    default {
