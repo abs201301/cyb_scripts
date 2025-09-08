@@ -33,7 +33,7 @@ $ChromeOptions.AddArgument('--ignore-certificate-errors')
 $ChromeOptions.AddArgument('--no-sandbox')
 $ChromeOptions.AddArgument('--Incognito')
 $ChromeOptions.AddArgument('--disable-gpu')
-$ChromeOptions.AddArgument('--headless=new') #Comment this for debugging. CPM runs in headless mode!
+#$ChromeOptions.AddArgument('--headless=new') #Comment this for debugging. CPM runs in headless mode!
 
 ##-------------------------------------------
 ## Init Variables
@@ -76,7 +76,32 @@ function Set-UIAccess {
      "Authorization" = "Basic $auth"
    }
    $body = @{"ui_access" = $Enable} | ConvertTo-Json
-   $response = Invoke-WebRequest -Uri $APIURL -UseBasicParsing -Method Put -Headers $headers -ContentType "Application/JSON" -Body $body -ErrorAction stop | Out-Null
+   $response = Invoke-WebRequest -Uri $APIURL -UseBasicParsing -Method Put -Headers $headers -ContentType "Application/JSON" -Body $body -ErrorAction stop
+   return ($response.Content | ConvertFrom-Json)
+}
+
+function Wait-ForUIAccess {
+   param(
+       [string]$User,
+       [string]$Pass,
+       [bool]$Expected,
+       [int]$TimeoutSec = 20
+   )
+   $auth = [Convert]::ToBase64String([System.Text.Encoding]::UTF8.GetBytes("${User}:${Pass}"))
+   $headers = @{ "Authorization" = "Basic $auth" }
+   $waittime = (Get-Date).AddSeconds($TimeoutSec)
+   while ((Get-Date) -lt $waittime) {
+       try {
+           $res = Invoke-RestMethod -Uri $APIURL -Method Get -Headers $headers -ErrorAction Stop
+           if ($res.ui_access -eq $Expected) {
+               return $true
+           }
+       } catch {
+           Start-Sleep -Seconds 1
+       }
+       Start-Sleep -Seconds 1
+   }
+   return $false
 }
 
 function WaitForElement {
@@ -123,7 +148,10 @@ if ($VerifyLogon -eq '1') {
 switch ($ActionName) {
    "verifypass" {
        try {
-           $res = Set-UIAccess -User $UserName -Pass $CurrentPwd -Enable $true
+           $null = Set-UIAccess -User $UserName -Pass $CurrentPwd -Enable $true
+           if (-not (Wait-ForUIAccess -User $UserName -Pass $CurrentPwd -Expected $true -TimeoutSec 20)) {
+              EndScript 'Failed to set ui_access' 1
+           }
        } catch {
            EndScript 'Failed to set ui_access' 1
        }
