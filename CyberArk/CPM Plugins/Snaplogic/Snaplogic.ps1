@@ -56,9 +56,9 @@ $Xpaths = @{
    Username = "//input[@type='email']"
    Password = "//input[@type='password']"
    Submit   = "//*[@type='submit']"
-   OldPass  = "//input[@type='password']"
-   NewPass  = '//*[@id="login-content"]/div/div[2]/div[2]/form/div[2]/div/div[2]/input'
-   Confirm  = '//*[@id="login-content"]/div/div[2]/div[2]/form/div[3]/div/div[2]/input'
+   OldPass  = "//*[@qa-id='old-password-input']"
+   NewPass  = "//*[@qa-id='new-password-input']"
+   Confirm  = "//*[@qa-id='confirm-password-input']"
    Designer = 'slc-header-tab-Designer'
 }
 
