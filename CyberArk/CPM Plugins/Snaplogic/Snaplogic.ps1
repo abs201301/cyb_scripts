@@ -21,19 +21,20 @@ if ($env:Path -notcontains ";$PathToFolder") { $env:Path += ";$PathToFolder" }
 Add-Type -AssemblyName System.Windows.Forms
 Add-Type -AssemblyName System.Web
 ##-------------------------------------------
-## Chrome driver settings
+## Edge driver settings
 ##-------------------------------------------
-$ChromeService = [OpenQA.Selenium.Chrome.ChromeDriverService]::CreateDefaultService()
-$ChromeService.SuppressInitialDiagnosticInformation = $true
-$ChromeService.HideCommandPromptWindow = $true
-$ChromeOptions = New-Object OpenQA.Selenium.Chrome.ChromeOptions
-$ChromeOptions.AddArgument('start-maximized')
-$ChromeOptions.AcceptInsecureCertificates = $true
-$ChromeOptions.AddArgument('--ignore-certificate-errors')
-$ChromeOptions.AddArgument('--no-sandbox')
-$ChromeOptions.AddArgument('--Incognito')
-$ChromeOptions.AddArgument('--disable-gpu')
-$ChromeOptions.AddArgument('--headless=new') #Comment this for debugging. CPM runs in headless mode!
+$EdgeService = [OpenQA.Selenium.Edge.EdgeDriverService]::CreateDefaultService()
+$EdgeService.SuppressInitialDiagnosticInformation = $true
+$EdgeService.HideCommandPromptWindow = $true
+$EdgeOptions = New-Object OpenQA.Selenium.Edge.EdgeOptions
+$EdgeOptions.AddArgument('start-maximized')
+$EdgeOptions.AddArgument('--ignore-certificate-errors')
+$EdgeOptions.AddArgument('--no-sandbox')
+$EdgeOptions.AddArgument('--disable-extensions')
+$EdgeOptions.AddArgument('--disable-gpu')
+$EdgeOptions.AddArgument('--InPrivate')
+#$EdgeOptions.AddArgument('--headless')
+$EdgeOptions.AddExcludedArgument('enable-automation')
 
 ##-------------------------------------------
 ## Init Variables
@@ -110,17 +111,13 @@ function WaitForElement {
        [string]$XPath,
        [int]$TimeoutSec = 15
    )
-   $wait = New-Object OpenQA.Selenium.Support.UI.WebDriverWait($Driver, [System.TimeSpan]::FromSeconds($TimeoutSec))
-   for ($i = 0; $i -lt $TimeoutSec * 4; $i++) {
-       Start-Sleep -Milliseconds 250
-       try {
-		   $element = $Driver.FindElement([OpenQA.Selenium.By]::Xpath($XPath))
-           if ($element.Displayed) {
-               return $element
-           }
-        } catch {
-            continue
-        }
+   $endTime = (Get-Date).AddSeconds($TimeoutSec)
+   while ((Get-Date) -lt $endTime) {
+      try {
+          $el = $Driver.FindElement([OpenQA.Selenium.By]::XPath($XPath))
+          if ($el.Displayed) { return $el }
+          } catch {}
+      Start-Sleep -Milliseconds 500
     }
     return $null
 }
@@ -128,12 +125,12 @@ function EndScript {
    param(
        $Output,$Logout
    )
-   If ($ChromeDriver) {
+   If ($EdgeDriver) {
     try {
         if ($Logout -ne "1") {
-            try { $ChromeDriver.Url = $LogoutURL; Start-Sleep -Seconds 1 } catch {}
+            try { $EdgeDriver.Url = $LogoutURL; Start-Sleep -Seconds 1 } catch {}
         }
-        $ChromeDriver.Quit()
+        $EdgeDriver.Quit()
     } catch {}
    }
    Write-Output $Output
@@ -156,15 +153,26 @@ switch ($ActionName) {
            EndScript 'Failed to set ui_access' 1
        }
        try {
-           $ChromeDriver = New-Object OpenQA.Selenium.Chrome.ChromeDriver($ChromeService,$ChromeOptions)
-           $ChromeDriver.Url = $BaseURL
-           $UsernameField = WaitForElement -Driver $ChromeDriver -XPath $Xpaths.Username -TimeoutSec 20
-           If ($UsernameField) { $UsernameField.SendKeys($UserName) } else { EndScript 'Unable to connect to the remote server' 1 }
-           $PasswordField = WaitForElement -Driver $ChromeDriver -XPath $Xpaths.Password -TimeoutSec 20
-           If ($PasswordField) { $PasswordField.SendKeys($CurrentPwd) } else { EndScript 'Unable to connect to the remote server' 1 }
-           $SubmitButton = WaitForElement -Driver $ChromeDriver -XPath $Xpaths.Submit -TimeoutSec 20
-           If ($SubmitButton) { $SubmitButton.Click() } else { EndScript 'Unable to connect to the remote server' 1 }
-           $Validation = WaitForElement -Driver $ChromeDriver -XPath "//*[@id='$($Xpaths.Designer)']" -TimeoutSec 20
+           $EdgeOptions.AddArgument("--app=$BaseURL")
+           $EdgeDriver = New-Object OpenQA.Selenium.Edge.EdgeDriver($EdgeOptions)
+           $timeout = 20
+           $sw = [System.Diagnostics.Stopwatch]::StartNew()
+           do {
+              Start-Sleep -Milliseconds 500
+              $readyState = $EdgeDriver.ExecuteScript("return document.readyState;")
+           } while ($readyState -ne 'complete' -and $sw.Elapsed.TotalSeconds -lt $timeout)
+           if ($readyState -ne 'complete') {
+              EndScript 'Unable to connect to the remote server' 1
+           }
+           $wrapper = WaitForElement -Driver $EdgeDriver -XPath '//*[@id="login-content"]' -TimeoutSec 20
+           if (-not $wrapper) { EndScript 'Unable to connect to the remote server' 1 }
+           $UsernameField = WaitForElement -Driver $EdgeDriver -XPath $Xpaths.Username -TimeoutSec 20
+           If ($UsernameField) { $UsernameField.SendKeys($UserName) } { EndScript 'Unable to connect to the remote server' 1 }
+           $PasswordField = WaitForElement -Driver $EdgeDriver -XPath $Xpaths.Password -TimeoutSec 20
+           If ($PasswordField) { $PasswordField.SendKeys($CurrentPwd) } { EndScript 'Unable to connect to the remote server' 1 }
+           $SubmitButton = WaitForElement -Driver $EdgeDriver -XPath $Xpaths.Submit -TimeoutSec 20
+           If ($SubmitButton) { $SubmitButton.Click() } { EndScript 'Unable to connect to the remote server' 1 }
+           $Validation = WaitForElement -Driver $EdgeDriver -XPath "//*[@id='$($Xpaths.Designer)']" -TimeoutSec 20
            if (-not $Validation) { EndScript '403 - Forbidden' 1 }
        }
        catch { EndScript '403 - Forbidden' 1 }
@@ -185,17 +193,28 @@ switch ($ActionName) {
            EndScript 'Failed to set ui_access' 1
        }
        try {
-           $ChromeDriver = New-Object OpenQA.Selenium.Chrome.ChromeDriver($ChromeService,$ChromeOptions)
-           $ChromeDriver.Url = $ChgPassURL
-           $PasswordField = WaitForElement -Driver $ChromeDriver -XPath $Xpaths.OldPass -TimeoutSec 20
+           $EdgeOptions.AddArgument("--app=$BaseURL")
+           $EdgeDriver = New-Object OpenQA.Selenium.Edge.EdgeDriver($EdgeService,$EdgeOptions)
+           $timeout = 20
+           $sw = [System.Diagnostics.Stopwatch]::StartNew()
+           do {
+              Start-Sleep -Milliseconds 500
+              $readyState = $EdgeDriver.ExecuteScript("return document.readyState;")
+           } while ($readyState -ne 'complete' -and $sw.Elapsed.TotalSeconds -lt $timeout)
+           if ($readyState -ne 'complete') {
+              EndScript 'Unable to connect to the remote server' 1
+           }
+           $wrapper = WaitForElement -Driver $EdgeDriver -XPath '//*[@id="login-content"]' -TimeoutSec 20
+           if (-not $wrapper) { EndScript 'Unable to connect to the remote server' 1 }
+           $PasswordField = WaitForElement -Driver $EdgeDriver -XPath $Xpaths.OldPass -TimeoutSec 20
            If ($PasswordField) { $PasswordField.SendKeys($CurrentPwd) } else { EndScript 'Unable to connect to the remote server' 1 }
-           $NewPasswordField = WaitForElement -Driver $ChromeDriver -XPath $Xpaths.NewPass -TimeoutSec 20
+           $NewPasswordField = WaitForElement -Driver $EdgeDriver -XPath $Xpaths.NewPass -TimeoutSec 20
            If ($NewPasswordField) { $NewPasswordField.SendKeys($NewPwd) } else { EndScript 'Unable to connect to the remote server' 1 }
-           $ConfirmPasswordField = WaitForElement -Driver $ChromeDriver -XPath $Xpaths.Confirm -TimeoutSec 20
+           $ConfirmPasswordField = WaitForElement -Driver $EdgeDriver -XPath $Xpaths.Confirm -TimeoutSec 20
            If ($ConfirmPasswordField) { $ConfirmPasswordField.SendKeys($NewPwd) } else { EndScript 'Unable to connect to the remote server' 1 }
-           $SubmitButton = WaitForElement -Driver $ChromeDriver -XPath $Xpaths.Submit -TimeoutSec 20
+           $SubmitButton = WaitForElement -Driver $EdgeDriver -XPath $Xpaths.Submit -TimeoutSec 20
            If ($SubmitButton) { $SubmitButton.Click() } else { EndScript 'Unable to connect to the remote server' 1 }
-           $Validation = WaitForElement -Driver $ChromeDriver -XPath "//*[@id='$($Xpaths.Designer)']" -TimeoutSec 20
+           $Validation = WaitForElement -Driver $EdgeDriver -XPath "//*[@id='$($Xpaths.Designer)']" -TimeoutSec 20
            if (-not $Validation) { EndScript '403 - Forbidden' 1 }
        }
        catch { EndScript '403 - Forbidden' 1 }
