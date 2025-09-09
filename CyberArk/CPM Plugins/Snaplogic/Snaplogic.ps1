@@ -21,7 +21,7 @@ if ($env:Path -notcontains ";$PathToFolder") { $env:Path += ";$PathToFolder" }
 Add-Type -AssemblyName System.Windows.Forms
 Add-Type -AssemblyName System.Web
 ##-------------------------------------------
-## Edge driver settings
+## MSEdge driver settings
 ##-------------------------------------------
 $EdgeService = [OpenQA.Selenium.Edge.EdgeDriverService]::CreateDefaultService()
 $EdgeService.SuppressInitialDiagnosticInformation = $true
@@ -154,7 +154,7 @@ switch ($ActionName) {
        }
        try {
            $EdgeOptions.AddArgument("--app=$BaseURL")
-           $EdgeDriver = New-Object OpenQA.Selenium.Edge.EdgeDriver($EdgeOptions)
+           $EdgeDriver = New-Object OpenQA.Selenium.Edge.EdgeDriver($EdgeService,$EdgeOptions)
            $timeout = 20
            $sw = [System.Diagnostics.Stopwatch]::StartNew()
            do {
