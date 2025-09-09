@@ -24,8 +24,8 @@ Add-Type -AssemblyName System.Web
 ## MSEdge driver settings
 ##-------------------------------------------
 $EdgeService = [OpenQA.Selenium.Edge.EdgeDriverService]::CreateDefaultService()
-$EdgeService.SuppressInitialDiagnosticInformation = $true
-$EdgeService.HideCommandPromptWindow = $true
+$EdgeService.LogPath = ".\edgedriver.log"
+$EdgeService.UseVerboseLogging = $true
 $EdgeOptions = New-Object OpenQA.Selenium.Edge.EdgeOptions
 $EdgeOptions.AddArgument('start-maximized')
 $EdgeOptions.AddArgument('--ignore-certificate-errors')
@@ -53,10 +53,10 @@ $LogoutURL     = "$BaseURL/sl/login.html?"
 ## Config - XPaths
 ##-------------------------------------------
 $Xpaths = @{
-   Username = '//*[@id="login-content"]/div/div[2]/div[2]/form/div[1]/div[2]/input'
-   Password = '//*[@id="login-content"]/div/div[2]/div[2]/form/div[2]/div[2]/input'
-   Submit   = '//*[@id="login-content"]/div/div[2]/div[2]/form/button'
-   OldPass  = '//*[@id="login-content"]/div/div[2]/div[2]/form/div[1]/div[2]/input'
+   Username = "//input[@type='email']"
+   Password = "//input[@type='password']"
+   Submit   = "//*[@type='submit']"
+   OldPass  = "//input[@type='password']"
    NewPass  = '//*[@id="login-content"]/div/div[2]/div[2]/form/div[2]/div/div[2]/input'
    Confirm  = '//*[@id="login-content"]/div/div[2]/div[2]/form/div[3]/div/div[2]/input'
    Designer = 'slc-header-tab-Designer'
@@ -111,16 +111,25 @@ function WaitForElement {
        [string]$XPath,
        [int]$TimeoutSec = 15
    )
-   $endTime = (Get-Date).AddSeconds($TimeoutSec)
-   while ((Get-Date) -lt $endTime) {
-      try {
-          $el = $Driver.FindElement([OpenQA.Selenium.By]::XPath($XPath))
-          if ($el.Displayed) { return $el }
-          } catch {}
-      Start-Sleep -Milliseconds 500
-    }
-    return $null
+   $wait = New-Object OpenQA.Selenium.Support.UI.WebDriverWait($Driver, [System.TimeSpan]::FromSeconds($TimeoutSec))
+   try {
+       $element = $wait.Until([Func[OpenQA.Selenium.IWebDriver, OpenQA.Selenium.IWebElement]]{
+        param($drv)
+        try {
+            $el = $drv.FindElement([OpenQA.Selenium.By]::XPath($XPath))
+            if ($el.Displayed) { return $el }
+            else { return $null }
+        } catch {
+            return $null
+        }
+       })
+       return $element
+   } catch [OpenQA.Selenium.WebDriverTimeoutException] {
+       Write-Warning "Element not found or not visible after $TimeoutSec seconds: $XPath"
+       return $null
+   }
 }
+
 function EndScript {
    param(
        $Output,$Logout
@@ -193,7 +202,7 @@ switch ($ActionName) {
            EndScript 'Failed to set ui_access' 1
        }
        try {
-           $EdgeOptions.AddArgument("--app=$BaseURL")
+           $EdgeOptions.AddArgument("--app=$ChgPassURL")
            $EdgeDriver = New-Object OpenQA.Selenium.Edge.EdgeDriver($EdgeService,$EdgeOptions)
            $timeout = 20
            $sw = [System.Diagnostics.Stopwatch]::StartNew()
