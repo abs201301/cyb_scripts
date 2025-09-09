@@ -33,7 +33,7 @@ $EdgeOptions.AddArgument('--no-sandbox')
 $EdgeOptions.AddArgument('--disable-extensions')
 $EdgeOptions.AddArgument('--disable-gpu')
 $EdgeOptions.AddArgument('--InPrivate')
-#$EdgeOptions.AddArgument('--headless')
+$EdgeOptions.AddArgument('--headless')
 $EdgeOptions.AddExcludedArgument('enable-automation')
 
 ##-------------------------------------------
@@ -167,11 +167,11 @@ switch ($ActionName) {
            $wrapper = WaitForElement -Driver $EdgeDriver -XPath '//*[@id="login-content"]' -TimeoutSec 20
            if (-not $wrapper) { EndScript 'Unable to connect to the remote server' 1 }
            $UsernameField = WaitForElement -Driver $EdgeDriver -XPath $Xpaths.Username -TimeoutSec 20
-           If ($UsernameField) { $UsernameField.SendKeys($UserName) } { EndScript 'Unable to connect to the remote server' 1 }
+           If ($UsernameField) { $UsernameField.SendKeys($UserName) } else { EndScript 'Unable to connect to the remote server' 1 }
            $PasswordField = WaitForElement -Driver $EdgeDriver -XPath $Xpaths.Password -TimeoutSec 20
-           If ($PasswordField) { $PasswordField.SendKeys($CurrentPwd) } { EndScript 'Unable to connect to the remote server' 1 }
+           If ($PasswordField) { $PasswordField.SendKeys($CurrentPwd) } else { EndScript 'Unable to connect to the remote server' 1 }
            $SubmitButton = WaitForElement -Driver $EdgeDriver -XPath $Xpaths.Submit -TimeoutSec 20
-           If ($SubmitButton) { $SubmitButton.Click() } { EndScript 'Unable to connect to the remote server' 1 }
+           If ($SubmitButton) { $SubmitButton.Click() } else { EndScript 'Unable to connect to the remote server' 1 }
            $Validation = WaitForElement -Driver $EdgeDriver -XPath "//*[@id='$($Xpaths.Designer)']" -TimeoutSec 20
            if (-not $Validation) { EndScript '403 - Forbidden' 1 }
        }
