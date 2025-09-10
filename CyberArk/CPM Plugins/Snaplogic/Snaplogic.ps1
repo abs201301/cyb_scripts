@@ -24,7 +24,7 @@ Add-Type -AssemblyName System.Web
 ## MSEdge driver settings
 ##-------------------------------------------
 $EdgeService = [OpenQA.Selenium.Edge.EdgeDriverService]::CreateDefaultService()
-$EdgeService.LogPath = ".\edgedriver.log"
+#$EdgeService.LogPath = ".\edgedriver.log"
 $EdgeService.UseVerboseLogging = $true
 $EdgeOptions = New-Object OpenQA.Selenium.Edge.EdgeOptions
 $EdgeOptions.AddArgument('start-maximized')
