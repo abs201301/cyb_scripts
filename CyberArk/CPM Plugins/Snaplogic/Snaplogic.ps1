@@ -33,8 +33,10 @@ $EdgeOptions.AddArgument('--no-sandbox')
 $EdgeOptions.AddArgument('--disable-extensions')
 $EdgeOptions.AddArgument('--disable-gpu')
 $EdgeOptions.AddArgument('--InPrivate')
-$EdgeOptions.AddArgument('--headless')
+$EdgeOptions.AddArgument('--headless=new')
 $EdgeOptions.AddExcludedArgument('enable-automation')
+$tempUserDataDir = [System.IO.Path]::Combine([System.IO.Path]::GetTempPath(), "EdgeProfile_" + [guid]::NewGuid().ToString())
+$EdgeOptions.AddArgument("--user-data-dir=$tempUserDataDir")
 
 ##-------------------------------------------
 ## Init Variables
@@ -141,6 +143,9 @@ function EndScript {
         }
         $EdgeDriver.Quit()
     } catch {}
+   }
+   if ($tempUserDataDir -and (Test-Path $tempUserDataDir)) {
+      try { Remove-Item -Path $tempUserDataDir -Recurse -Force -ErrorAction SilentlyContinue } catch {}
    }
    Write-Output $Output
    return 'PowerShell Script Ended'
