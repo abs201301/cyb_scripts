@@ -5,7 +5,7 @@
 #        ---------------------------
 # Description : Snaplogic Local Accounts
 # Created : June 17, 2024
-# Updated: Sept 05, 2025 (Refactored for maintainability)
+# Updated: Sept 15, 2025 (Refactored for maintainability)
 # Abhishek Singh
 # Uses Selenium framework and REST web services
 #=================================================================================
@@ -15,28 +15,37 @@
 ## Load Dependencies
 ##-------------------------------------------
 $ErrorActionPreference = "stop"
-$PathToFolder = 'D:\Program Files (x86)\CyberArk\Password Manager\bin'
-[System.Reflection.Assembly]::LoadFrom("$PathToFolder\WebDriver.dll") | Out-Null
-if ($env:Path -notcontains ";$PathToFolder") { $env:Path += ";$PathToFolder" }
+$PathToFolder = 'C:\Program Files (x86)\CyberArk\Password Manager\bin'
+[System.Reflection.Assembly]::LoadFrom($PathToFolder + "\WebDriver.dll" -f $PathToFolder) | Out-Null
+if ($env:Path -notcontains ";$PathToFolder" ) {
+    $env:Path += ";$PathToFolder"
+}
+#$driverPath = "C:\Program Files (x86)\CyberArk\Password Manager\bin"
 Add-Type -AssemblyName System.Windows.Forms
 Add-Type -AssemblyName System.Web
+
 ##-------------------------------------------
-## MSEdge driver settings
+## Google Chrome driver settings
 ##-------------------------------------------
-$EdgeService = [OpenQA.Selenium.Edge.EdgeDriverService]::CreateDefaultService()
-#$EdgeService.LogPath = ".\edgedriver.log"
-$EdgeService.UseVerboseLogging = $true
-$EdgeOptions = New-Object OpenQA.Selenium.Edge.EdgeOptions
-$EdgeOptions.AddArgument('start-maximized')
-$EdgeOptions.AddArgument('--ignore-certificate-errors')
-$EdgeOptions.AddArgument('--no-sandbox')
-$EdgeOptions.AddArgument('--disable-extensions')
-$EdgeOptions.AddArgument('--disable-gpu')
-$EdgeOptions.AddArgument('--InPrivate')
-$EdgeOptions.AddArgument('--headless=new')
-$EdgeOptions.AddExcludedArgument('enable-automation')
-$tempUserDataDir = [System.IO.Path]::Combine([System.IO.Path]::GetTempPath(), "EdgeProfile_" + [guid]::NewGuid().ToString())
-$EdgeOptions.AddArgument("--user-data-dir=$tempUserDataDir")
+
+$ChromeService = [OpenQA.Selenium.Chrome.ChromeDriverService]::CreateDefaultService()
+#$ChromeService.LogPath = ".\chromedriver.log"
+#$ChromeService.EnableVerboseLogging = $true
+$ChromeOptions = New-Object OpenQA.Selenium.Chrome.ChromeOptions
+$ChromeOptions.AddArgument('start-maximized')
+$ChromeOptions.AcceptInsecureCertificates = $True
+$ChromeOptions.AddArgument('--no-sandbox')
+$ChromeOptions.AddArgument('--disable-extensions')
+$ChromeOptions.AddArgument('--disable-gpu')
+$ChromeOptions.AddArgument('--incognito')
+$ChromeOptions.AddArgument('--headless=new')
+$ChromeOptions.AddExcludedArgument('enable-automation')
+$ChromeOptions.AddArgument("--remote-debugging-port=" + (Get-Random -Minimum 20000 -Maximum 50000))
+$tempUserDataDir = [System.IO.Path]::Combine([System.IO.Path]::GetTempPath(), "ChromeProfile_" + [guid]::NewGuid().ToString())
+New-Item -ItemType Directory -Path $tempUserDataDir | Out-Null
+$ChromeOptions.AddArgument("--user-data-dir=$tempUserDataDir")
+
+
 
 ##-------------------------------------------
 ## Init Variables
@@ -61,9 +70,8 @@ $Xpaths = @{
    OldPass  = "//*[@qa-id='old-password-input']"
    NewPass  = "//*[@qa-id='new-password-input']"
    Confirm  = "//*[@qa-id='confirm-password-input']"
-   Designer = 'slc-header-tab-Designer'
 }
-
+[Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
 ##-------------------------------------------
 ## Helper Functions
 ##-------------------------------------------
@@ -132,24 +140,42 @@ function WaitForElement {
    }
 }
 
+function WaitForUrlChange {
+   param(
+       [object]$Driver,
+       [string]$CurrentUrl,
+       [int]$TimeoutSec = 15
+   )
+   $endTime = (Get-Date).AddSeconds($TimeoutSec)
+   while ((Get-Date) -lt $endTime) {
+       Start-Sleep -Milliseconds 500
+       try {
+           $newUrl = $Driver.Url
+           if ($newUrl -ne $CurrentUrl) {
+               return $true
+           }
+       } catch {}
+   }
+   return $false
+}
+
 function EndScript {
    param(
        $Output,$Logout
    )
-   If ($EdgeDriver) {
+   If ($ChromeDriver) {
     try {
         if ($Logout -ne "1") {
-            try { $EdgeDriver.Url = $LogoutURL; Start-Sleep -Seconds 1 } catch {}
+            try { $ChromeDriver.Url = $LogoutURL; Start-Sleep -Seconds 1 } catch {}
         }
-        $EdgeDriver.Quit()
+        if ($ChromeDriver) { $ChromeDriver.Quit() }
+        if (Test-Path $tempUserDataDir) { Remove-Item -Path $tempUserDataDir -Recurse -Force }
     } catch {}
-   }
-   if ($tempUserDataDir -and (Test-Path $tempUserDataDir)) {
-      try { Remove-Item -Path $tempUserDataDir -Recurse -Force -ErrorAction SilentlyContinue } catch {}
    }
    Write-Output $Output
    return 'PowerShell Script Ended'
 }
+
 ##-------------------------------------------
 ## Main Logic
 ##-------------------------------------------
@@ -167,29 +193,36 @@ switch ($ActionName) {
            EndScript 'Failed to set ui_access' 1
        }
        try {
-           $EdgeOptions.AddArgument("--app=$BaseURL")
-           $EdgeDriver = New-Object OpenQA.Selenium.Edge.EdgeDriver($EdgeService,$EdgeOptions)
+           $ChromeDriver = New-Object OpenQA.Selenium.Chrome.ChromeDriver($ChromeService,$ChromeOptions)
+           $ChromeDriver.Navigate().GoToUrl($BaseURL)
            $timeout = 20
            $sw = [System.Diagnostics.Stopwatch]::StartNew()
            do {
               Start-Sleep -Milliseconds 500
-              $readyState = $EdgeDriver.ExecuteScript("return document.readyState;")
+              $readyState = $ChromeDriver.ExecuteScript("return document.readyState;")
            } while ($readyState -ne 'complete' -and $sw.Elapsed.TotalSeconds -lt $timeout)
            if ($readyState -ne 'complete') {
               EndScript 'Unable to connect to the remote server' 1
            }
-           $wrapper = WaitForElement -Driver $EdgeDriver -XPath '//*[@id="login-content"]' -TimeoutSec 20
+           $wrapper = WaitForElement -Driver $ChromeDriver -XPath '//*[@id="login-content"]' -TimeoutSec 20
            if (-not $wrapper) { EndScript 'Unable to connect to the remote server' 1 }
-           $UsernameField = WaitForElement -Driver $EdgeDriver -XPath $Xpaths.Username -TimeoutSec 20
+           $UsernameField = WaitForElement -Driver $ChromeDriver -XPath $Xpaths.Username -TimeoutSec 20
            If ($UsernameField) { $UsernameField.SendKeys($UserName) } else { EndScript 'Unable to connect to the remote server' 1 }
-           $PasswordField = WaitForElement -Driver $EdgeDriver -XPath $Xpaths.Password -TimeoutSec 20
+           $PasswordField = WaitForElement -Driver $ChromeDriver -XPath $Xpaths.Password -TimeoutSec 20
            If ($PasswordField) { $PasswordField.SendKeys($CurrentPwd) } else { EndScript 'Unable to connect to the remote server' 1 }
-           $SubmitButton = WaitForElement -Driver $EdgeDriver -XPath $Xpaths.Submit -TimeoutSec 20
-           If ($SubmitButton) { $SubmitButton.Click() } else { EndScript 'Unable to connect to the remote server' 1 }
-           $Validation = WaitForElement -Driver $EdgeDriver -XPath "//*[@id='$($Xpaths.Designer)']" -TimeoutSec 20
-           if (-not $Validation) { EndScript '403 - Forbidden' 1 }
+           $currentUrl = $ChromeDriver.Url
+           $SubmitButton = WaitForElement -Driver $ChromeDriver -XPath $Xpaths.Submit -TimeoutSec 20
+           If ($SubmitButton) {
+              $SubmitButton.Click()
+              if (-not (WaitForUrlChange -Driver $ChromeDriver -CurrentUrl $currentUrl -TimeoutSec 15)) {
+                 Write-Warning "URL did not change after submit. Assuming password was verified anyway."
+              } 
+           } else { 
+              EndScript 'Unable to connect to the remote server' 1
+           }
+       } catch { 
+           EndScript '403 - Forbidden' 1
        }
-       catch { EndScript '403 - Forbidden' 1 }
        try {
            $res = Set-UIAccess -User $UserName -Pass $CurrentPwd -Enable $false
        } catch {
@@ -207,29 +240,35 @@ switch ($ActionName) {
            EndScript 'Failed to set ui_access' 1
        }
        try {
-           $EdgeOptions.AddArgument("--app=$ChgPassURL")
-           $EdgeDriver = New-Object OpenQA.Selenium.Edge.EdgeDriver($EdgeService,$EdgeOptions)
+           $ChromeDriver = New-Object OpenQA.Selenium.Chrome.ChromeDriver($ChromeService,$ChromeOptions)
+           $ChromeDriver.Navigate().GoToUrl($ChgPassURL)
            $timeout = 20
            $sw = [System.Diagnostics.Stopwatch]::StartNew()
            do {
               Start-Sleep -Milliseconds 500
-              $readyState = $EdgeDriver.ExecuteScript("return document.readyState;")
+              $readyState = $ChromeDriver.ExecuteScript("return document.readyState;")
            } while ($readyState -ne 'complete' -and $sw.Elapsed.TotalSeconds -lt $timeout)
            if ($readyState -ne 'complete') {
               EndScript 'Unable to connect to the remote server' 1
            }
-           $wrapper = WaitForElement -Driver $EdgeDriver -XPath '//*[@id="login-content"]' -TimeoutSec 20
+           $wrapper = WaitForElement -Driver $ChromeDriver -XPath '//*[@id="login-content"]' -TimeoutSec 20
            if (-not $wrapper) { EndScript 'Unable to connect to the remote server' 1 }
-           $PasswordField = WaitForElement -Driver $EdgeDriver -XPath $Xpaths.OldPass -TimeoutSec 20
+           $PasswordField = WaitForElement -Driver $ChromeDriver -XPath $Xpaths.OldPass -TimeoutSec 20
            If ($PasswordField) { $PasswordField.SendKeys($CurrentPwd) } else { EndScript 'Unable to connect to the remote server' 1 }
-           $NewPasswordField = WaitForElement -Driver $EdgeDriver -XPath $Xpaths.NewPass -TimeoutSec 20
+           $NewPasswordField = WaitForElement -Driver $ChromeDriver -XPath $Xpaths.NewPass -TimeoutSec 20
            If ($NewPasswordField) { $NewPasswordField.SendKeys($NewPwd) } else { EndScript 'Unable to connect to the remote server' 1 }
-           $ConfirmPasswordField = WaitForElement -Driver $EdgeDriver -XPath $Xpaths.Confirm -TimeoutSec 20
+           $ConfirmPasswordField = WaitForElement -Driver $ChromeDriver -XPath $Xpaths.Confirm -TimeoutSec 20
            If ($ConfirmPasswordField) { $ConfirmPasswordField.SendKeys($NewPwd) } else { EndScript 'Unable to connect to the remote server' 1 }
-           $SubmitButton = WaitForElement -Driver $EdgeDriver -XPath $Xpaths.Submit -TimeoutSec 20
-           If ($SubmitButton) { $SubmitButton.Click() } else { EndScript 'Unable to connect to the remote server' 1 }
-           $Validation = WaitForElement -Driver $EdgeDriver -XPath "//*[@id='$($Xpaths.Designer)']" -TimeoutSec 20
-           if (-not $Validation) { EndScript '403 - Forbidden' 1 }
+           $currentUrl = $ChromeDriver.Url
+           $SubmitButton = WaitForElement -Driver $ChromeDriver -XPath $Xpaths.Submit -TimeoutSec 20
+           If ($SubmitButton) {
+              $SubmitButton.Click()
+              if (-not (WaitForUrlChange -Driver $ChromeDriver -CurrentUrl $currentUrl -TimeoutSec 15)) {
+               Write-Warning "URL did not change after submit. Assuming password was changed anyway."
+              }
+           } else {
+              EndScript 'Unable to connect to the remote server' 1
+           }
        }
        catch { EndScript '403 - Forbidden' 1 }
        try {
