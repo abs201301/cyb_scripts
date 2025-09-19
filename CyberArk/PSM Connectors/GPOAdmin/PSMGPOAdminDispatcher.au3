@@ -102,16 +102,17 @@ EndFunc
 Func LoginProcess() ; --------------> Uses control commands to login to client
 	
 	_BlockInputEx(1)
-	; About AutoIT logon flags:- We will use 1 for GPMC and 2 for GPOAdmin
-	;0 - Interactive logon with no profile.
-	;1 - Interactive logon with profile.
-	;2 - Network credentials only.
-	;4 - Inherit the calling process's environment instead of the user's environment.
-	;Why 1 for GPMC - The LogonFlag=1 essentially tells the connector that you need to log on with 
-	;a regular user with a profile, rather than the transparent PSM Shadow User process. This is so that you can launch GPMC in the context of that user. 
-	;Since this is all happening on the PSM machine itself, we need to 'allow log on locally' for those users, as they will be inside a managed PSM session, 
-	;running GPMC on the PSM server to execute tasks. Basically, when GPMC tries to log in as the target user, it is a local logon.
-	
+  #cs
+	About AutoIT logon flags:- We will use 1 for GPMC and 2 for GPOAdmin
+	0 - Interactive logon with no profile.
+	1 - Interactive logon with profile.
+	2 - Network credentials only.
+	4 - Inherit the calling process's environment instead of the user's environment.
+	Why 1 for GPMC - The LogonFlag=1 essentially tells the connector that you need to log on with 
+	a regular user with a profile, rather than the transparent PSM Shadow User process. This is so that you can launch GPMC in the context of that user. 
+	Since this is all happening on the PSM machine itself, we need to 'allow log on locally' for those users, as they will be inside a managed PSM session, 
+	running GPMC on the PSM server to execute tasks. Basically, when GPMC tries to log in as the target user, it is a local logon.
+	#ce
 	Local $Apps[2][4] = [ _
 		["GPMC", '"' & @SystemDir & '\mmc.exe" "C:\Windows\System32\gpmc.msc"', 1, "Group Policy Management Console"], _
 		["GPOADmin", '"' & @SystemDir & '\mmc.exe" "C:\Program Files\Quest\GPOADmin\GPOADmin.msc"', 2, "GPOADmin"] _
