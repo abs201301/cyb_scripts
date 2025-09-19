@@ -19,7 +19,7 @@ AutoItSetOption("WinTitleMatchMode", 2)
 ;============================================================
 ;             PSM-GPOAdmin
 ;             -------------------------
-; Created : SEP - 2025
+; Created : FEB - 2025
 ; Created By: Abhishek Singh
 ; This is intended to work with Quest GPOAdmin (all versions)
 ;
@@ -35,12 +35,6 @@ Global $TargetUsername, $TargetPassword, $TargetDomain, $AppName
 Global $WinTitle, $WinText, $hMsg
 Global $iPID = 0, $ConnectionClientPID = 0, $Debug = "N"
 Global $LOG_MESSAGE_PREFIX, $ERROR_MESSAGE_TITLE
-Global $LogonFlag  = 1
-
-;0 - Interactive logon with no profile.
-;1 - Interactive logon with profile.
-;2 - Network credentials only.
-;4 - Inherit the calling process's environment instead of the user's environment.
 
 
 ;=======================================
@@ -109,26 +103,40 @@ EndFunc
 Func LoginProcess() ; --------------> Uses control commands to login to client
 	
 	_BlockInputEx(1)
+	; About AutoIT logon flags:- We will use 1 for GPMC and 2 for GPOAdmin
+	;0 - Interactive logon with no profile.
+	;1 - Interactive logon with profile.
+	;2 - Network credentials only.
+	;4 - Inherit the calling process's environment instead of the user's environment.
+	;Why 1 for GPMC - The LogonFlag=1 essentially tells the connector that you need to log on with 
+	;a regular user with a profile, rather than the transparent PSM Shadow User process. This is so that you can launch GPMC in the context of that user. 
+	;Since this is all happening on the PSM machine itself, we need to 'allow log on locally' for those users, as they will be inside a managed PSM session, 
+	;running GPMC on the PSM server to execute tasks. Basically, when GPMC tries to log in as the target user, it is a local logon.
 	
-	Local $Apps[2][2] = [ _
-		["GPMC", '"' & @SystemDir & '\mmc.exe" "C:\Windows\System32\gpmc.msc"'], _
-		["GPOADmin", '"' & @SystemDir & '\mmc.exe" "C:\Program Files\Quest\GPOADmin\GPOADmin.msc"'] _
+	Local $Apps[2][4] = [ _
+		["GPMC", '"' & @SystemDir & '\mmc.exe" "C:\Windows\System32\gpmc.msc"', 1, "Group Policy Management Console"], _
+		["GPOADmin", '"' & @SystemDir & '\mmc.exe" "C:\Program Files\Quest\GPOADmin\GPOADmin.msc"', 2, "GPOADmin"] _
 	]
+	
+	Local $bLaunched = False
+	$WinTitle = ""
+	$WinText = ""
 	
 	For $i = 0 To UBound($Apps) - 1
 		If $Apps[$i][0] = $AppName Then
-			LogWrite("Launching selected application: " & $AppName)
-			$iPID = RunAs($TargetUsername, $TargetDomain, $TargetPassword, $LogonFlag, $Apps[$i][1], @SystemDir, @SW_MAXIMIZE)
+			LogWrite("Launching selected application: " & $AppName & " with LogonFlag = " & $Apps[$i][2])
+			$iPID = RunAs($TargetUsername, $TargetDomain, $TargetPassword, $Apps[$i][1], $Apps[$i][2], @SystemDir, @SW_MAXIMIZE)
+			$WinTitle = $Apps[$i][3]
+			$bLaunched = True
 			ExitLoop
 		EndIf
 	Next
 
-	if ($iPID == 0) Then
-		Error(StringFormat("Failed to execute process [%s]", $Apps[$i][1], @error))
+	If Not $bLaunched Or $iPID = 0 Then
+		Error(StringFormat("Failed to execute process [%s] for AppName [%s] - @error=%d", _
+           $Apps[$i][1], $AppName, @error))
 	EndIf
 	
-	$WinTitle = "GPOADmin"
-	$WinText = ""
 	$hMsg = WinWait($WinTitle, $WinText, 20)
 
 	If WinActivate($hMsg) Then
