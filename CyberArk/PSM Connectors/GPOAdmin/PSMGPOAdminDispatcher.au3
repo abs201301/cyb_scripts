@@ -4,7 +4,6 @@ AutoItSetOption("WinTitleMatchMode", 2)
 
 #include <MsgBoxConstants.au3>
 #include "PSMGenericClientWrapper.au3"
-#include "PSMGenericClientWrapper.au3"
 #include <GUIConstantsEx.au3>
 #include <WindowsConstants.au3>
 #include <ProgressConstants.au3>
