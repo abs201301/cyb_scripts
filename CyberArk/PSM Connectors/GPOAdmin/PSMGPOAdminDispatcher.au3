@@ -4,20 +4,13 @@ AutoItSetOption("WinTitleMatchMode", 2)
 
 #include <MsgBoxConstants.au3>
 #include "PSMGenericClientWrapper.au3"
-#include <GUIConstantsEx.au3>
-#include <WindowsConstants.au3>
-#include <ProgressConstants.au3>
-#include <ColorConstants.au3>
-#include <StaticConstants.au3>
 #include <AutoItConstants.au3>
-#include <WinAPIFiles.au3>
-#include <WinAPISys.au3>
 #include <BlockInputEx.au3>
 #include <CyberArkPSMAnimation.au3>
 
 ;============================================================
 ;             PSM-GPOAdmin
-;             -------------------------
+;             -------------
 ; Created : FEB - 2025
 ; Created By: Abhishek Singh
 ; This is intended to work with Quest GPOAdmin (all versions)
@@ -102,7 +95,7 @@ EndFunc
 Func LoginProcess() ; --------------> Uses control commands to login to client
 	
 	_BlockInputEx(1)
-  #cs
+	#cs
 	About AutoIT logon flags:- We will use 1 for GPMC and 2 for GPOAdmin
 	0 - Interactive logon with no profile.
 	1 - Interactive logon with profile.
@@ -113,8 +106,9 @@ Func LoginProcess() ; --------------> Uses control commands to login to client
 	Since this is all happening on the PSM machine itself, we need to 'allow log on locally' for those users, as they will be inside a managed PSM session, 
 	running GPMC on the PSM server to execute tasks. Basically, when GPMC tries to log in as the target user, it is a local logon.
 	#ce
+	
 	Local $Apps[2][4] = [ _
-		["GPMC", '"' & @SystemDir & '\mmc.exe" "C:\Windows\System32\gpmc.msc"', 1, "Group Policy Management Console"], _
+		["GPMC", '"' & @SystemDir & '\mmc.exe" "C:\Windows\System32\gpmc.msc"', 1, "[CLASS:MMCMainFrame]"], _
 		["GPOADmin", '"' & @SystemDir & '\mmc.exe" "C:\Program Files\Quest\GPOADmin\GPOADmin.msc"', 2, "GPOADmin"] _
 	]
 	
@@ -125,7 +119,7 @@ Func LoginProcess() ; --------------> Uses control commands to login to client
 	For $i = 0 To UBound($Apps) - 1
 		If $Apps[$i][0] = $AppName Then
 			LogWrite("Launching selected application: " & $AppName & " with LogonFlag = " & $Apps[$i][2])
-			$iPID = RunAs($TargetUsername, $TargetDomain, $TargetPassword, $Apps[$i][1], $Apps[$i][2], @SystemDir, @SW_MAXIMIZE)
+			$iPID = RunAs($TargetUsername, $TargetDomain, $TargetPassword, $Apps[$i][2], $Apps[$i][1], @SystemDir, @SW_MAXIMIZE)
 			$WinTitle = $Apps[$i][3]
 			$bLaunched = True
 			ExitLoop
@@ -136,10 +130,11 @@ Func LoginProcess() ; --------------> Uses control commands to login to client
 		Error(StringFormat("Failed to execute process [%s] for AppName [%s] - @error=%d", _
            $Apps[$i][1], $AppName, @error))
 	EndIf
-	
+	LogWrite("Waiting for window with title: " & $WinTitle)
 	$hMsg = WinWait($WinTitle, $WinText, 20)
 
-	If WinActivate($hMsg) Then
+	If $hMsg <> 0 Then
+		WinActivate($hMsg)
 		LogWrite("Finished LoginProcess() successfully")
 		WinSetState($hMsg, "", @SW_MAXIMIZE)
 	EndIf
