@@ -1,7 +1,6 @@
 #include <File.au3>
 #include <InetConstants.au3>
 #include <Date.au3>
-
 ;============================================================
 ;           Update Webdriver utility
 ;           -------------------------
@@ -10,19 +9,16 @@
 ; © Abhishek Singh (FIL)
 ; Developed and compiled in AutoIt 3.3.14.1
 ;============================================================
-
-Global Const $g_sDriverPath = "D:\CyberArk\PSM\"
-Global Const $g_sLogFile = $g_sDriverPath & "\WebDriverUpdater_" & @MDAY & "-" & @MON & "-" & @YEAR & ".log"
+Global Const $g_sDriverPath = "D:\CyberArk\PSM"
+Global Const $g_sLogFile = $g_sDriverPath & "\WebDriverUpdater_" & StringFormat("%02d-%02d-%04d", @MDAY, @MON, @YEAR) & ".log"
 
 ; ========== Check & Update Webdrivers ============
-
 UpdateWebDriver("GoogleChrome")
 UpdateWebDriver("MSEdge")
 
 ; ============ MAIN FUNCTION  ============
-
 Func UpdateWebDriver($sBrowser)
-   Local $sExe, $sBit, $sVer, $sMajorVer, $sUrl, $sDriverFile
+   Local $sExe, $sBit, $sVer, $sDriverFile, $sUrl
 
    If $sBrowser = "GoogleChrome" Then
        $sExe = @ProgramFilesDir & "\Google\Chrome\Application\chrome.exe"
@@ -36,78 +32,62 @@ Func UpdateWebDriver($sBrowser)
        Return
    EndIf
 
-   If StringInStr($sExe, "(x86)") Then
-       $sBit = "32"
-   Else
-       $sBit = "64"
-   EndIf
+   $sBit = StringInStr($sExe, "(x86)") ? "32" : "64"
 
    $sVer = FileGetVersion($sExe)
    If @error Or $sVer = "" Then
-       LogWrite($MB_ICONERROR & "Error. Could not detect " & $sBrowser & " version")
+       LogWrite("Error. Could not detect " & $sBrowser & " version")
        Return
    EndIf
-   $sMajorVer = StringRegExpReplace($sVer, "^(\d+)\..*", "\1")
 
-   If $sBrowser = "GoogleCrome" Then
-       $sDriverFile = $g_sDriverPath & "chromedriver.exe"
-   Else
-       $sDriverFile = $g_sDriverPath & "msedgedriver.exe"
-   EndIf
+   $sDriverFile = ($sBrowser = "GoogleChrome") ? $g_sDriverPath & "\chromedriver.exe" : $g_sDriverPath & "\msedgedriver.exe"
 
    If FileExists($sDriverFile) Then
        Local $sDrvVer = FileGetVersion($sDriverFile)
        If $sDrvVer = $sVer Then
-           LogWrite($sBrowser & " webdriver already matches major version " & $sDrvVer)
+           LogWrite($sBrowser & " webdriver already matches exact version " & $sDrvVer)
            Return
-	   Else
-		   LogWrite($sBrowser & " webdriver version mismatch (found " & $sDrvVer & ", browser " & $sVer & ")")
-       EndIf
-	Else
-	   LogWrite($sBrowser & " driver not found. Downloading new driver")
-   EndIf
-
-   Local $sDriverVer, $sApi, $sVerFile
-   If $sBrowser = "GoogleChrome" Then
-       $sApi = "https://chromedriver.storage.googleapis.com/LATEST_RELEASE_" & $sVer
-       $sVerFile = $g_sDriverPath & "\chrome_latest.txt"
-       InetGet($sApi, $sVerFile, $INET_FORCERELOAD, $INET_DOWNLOADWAIT)
-       $sDriverVer = StringStripWS(FileRead($sVerFile), 3)
-       FileDelete($sVerFile)
-       If $sDriverVer = "" Then
-           LogWrite("Error- Could not fetch ChromeDriver version")
-           Return
-       EndIf
-
-       $sUrl = "https://chromedriver.storage.googleapis.com/" & $sDriverVer & "/chromedriver_win32.zip"
-   ElseIf $sBrowser = "MSEdge" Then
-       $sApi = "https://msedgedriver.azureedge.net/LATEST_RELEASE_" & $sVer
-       $sVerFile = $g_sDriverPath & "\edge_latest.txt"
-       InetGet($sApi, $sVerFile, $INET_FORCERELOAD, $INET_DOWNLOADWAIT)
-       $sDriverVer = StringStripWS(FileRead($sVerFile), 3)
-       FileDelete($sVerFile)
-       If $sDriverVer = "" Then
-           LogWrite("Error - Could not fetch EdgeDriver version")
-           Return
-       EndIf
-       If $sBit = "64" Then
-           $sUrl = "https://msedgedriver.azureedge.net/" & $sDriverVer & "/edgedriver_win64.zip"
        Else
-           $sUrl = "https://msedgedriver.azureedge.net/" & $sDriverVer & "/edgedriver_win32.zip"
+           LogWrite($sBrowser & " webdriver version mismatch (found " & $sDrvVer & ", browser " & $sVer & ")")
        EndIf
+   Else
+       LogWrite($sBrowser & " driver not found. Downloading new driver")
    EndIf
 
-   Local $sZip = $g_sDriverPath & $sBrowser & "_driver.zip"
-   InetGet($sUrl, $sZip, $INET_FORCERELOAD, $INET_DOWNLOADWAIT)
-   If Not FileExists($sZip) Then
-       LogWrite("Error- Failed to download " & $sBrowser & " driver")
+   If $sBrowser = "GoogleChrome" Then
+
+       Local $sArch = ($sBit = "64") ? "win64" : "win32"
+       $sUrl = "https://storage.googleapis.com/chrome-for-testing-public/" & $sVer & "/" & $sArch & "/chromedriver-" & $sArch & ".zip"
+   ElseIf $sBrowser = "MSEdge" Then
+       $sUrl = "https://msedgewebdriverstorage.blob.core.windows.net/edgewebdriver/" & $sVer & "/edgedriver_win" & $sBit & ".zip"
+   EndIf
+
+   Local $sZip = $g_sDriverPath & "\" & $sBrowser & "_driver.zip"
+   If Not _DownloadWithRetry($sUrl, $sZip) Then
+       LogWrite("Error - Failed to download driver ZIP after multiple attempts: " & $sUrl)
        Return
    EndIf
 
-   If FileExists($sDriverFile) Then FileDelete($sDriverFile)
+   If FileExists($sDriverFile) Then
+	  FileDelete($sDriverFile)
+   EndIf
    _ExtractZip($sZip, $g_sDriverPath)
    FileDelete($sZip)
-   LogWrite($sBrowser & " webdriver updated successfully to version " & $sDriverVer)
+   LogWrite($sBrowser & " webdriver updated successfully to version " & $sVer)
+
+EndFunc
+
+; =================== Helper: Download with retry ===================
+Func _DownloadWithRetry($sUrl, $sDest, $iMaxRetries = 3, $iWaitSec = 5)
+   Local $iAttempt = 0
+   While $iAttempt < $iMaxRetries
+       InetGet($sUrl, $sDest, $INET_FORCERELOAD, $INET_DOWNLOADWAIT)
+       If FileExists($sDest) Then Return True
+       $iAttempt += 1
+       LogWrite("Download failed for " & $sUrl & ". Retry " & $iAttempt & " of " & $iMaxRetries)
+       Sleep($iWaitSec * 1000)
+   WEnd
+   Return False
 EndFunc
 
 ; =================== Extract Zip using Shell.Application ===================
@@ -122,9 +102,8 @@ EndFunc
 
 ; =================== Write Log messages ===================
 Func LogWrite($lMsg)
-   Local $sTime = _NowCalcDate() & " " & @HOUR & ":" & @MIN & ":" & @SEC
-   Local $sTime = StringFormat("%02d-%02d-%04d %02d:%02d:%02d", @MDAY, @MON, @YEAR, @HOUR, @MIN, @SEC)
-   Local $hFile = FileOpen($g_sLogFile, 1)
+   Local $sTime = StringFormat("%02d/%02d/%04d %02d:%02d:%02d", @MDAY, @MON, @YEAR, @HOUR, @MIN, @SEC)
+   Local $hFile = FileOpen($g_sLogFile, 1) ; append mode
    If $hFile = -1 Then Return
    FileWriteLine($hFile, $sTime & " - " & $lMsg)
    FileClose($hFile)
