@@ -9,7 +9,7 @@
 ; © Abhishek Singh
 ; Developed and compiled in AutoIt 3.3.14.1
 ;============================================================
-Global Const $g_sDriverPath = "D:\WebDrivers"
+Global Const $g_sDriverPath = "D:\NewFolder"
 Global Const $g_sLogFile = $g_sDriverPath & "\WebDriverUpdater_" & StringFormat("%02d-%02d-%04d", @MDAY, @MON, @YEAR) & ".log"
 
 ; ========== Check & Update Webdrivers ============
@@ -28,7 +28,7 @@ Func UpdateWebDriver($sBrowser)
        If Not FileExists($sExe) Then $sExe = @ProgramFilesDir & " (x86)\Microsoft\Edge\Application\msedge.exe"
    EndIf
    If Not FileExists($sExe) Then
-       LogWrite($sBrowser & " not found")
+       LogWrite($sBrowser & " not found", True)
        Return
    EndIf
 
@@ -36,16 +36,18 @@ Func UpdateWebDriver($sBrowser)
 
    $sVer = FileGetVersion($sExe)
    If @error Or $sVer = "" Then
-       LogWrite("Error. Could not detect " & $sBrowser & " version")
+       LogWrite("Error. Could not detect " & $sBrowser & " version", True)
        Return
    EndIf
+   LogWrite("Detected browser: " & $sBrowser & " with version: " & $sVer)
 
    $sDriverFile = ($sBrowser = "GoogleChrome") ? $g_sDriverPath & "\chromedriver.exe" : $g_sDriverPath & "\msedgedriver.exe"
 
    If FileExists($sDriverFile) Then
        Local $sDrvVer = FileGetVersion($sDriverFile)
+	   LogWrite("Found " & $sDriverFile & " with version: " & $sDrvVer)
        If $sDrvVer = $sVer Then
-           LogWrite($sBrowser & " webdriver already matches exact version " & $sDrvVer)
+           LogWrite($sBrowser & " webdriver already matches exact version: " & $sDrvVer, True)
            Return
        Else
            LogWrite($sBrowser & " webdriver version mismatch (found " & $sDrvVer & ", browser " & $sVer & ")")
@@ -55,7 +57,6 @@ Func UpdateWebDriver($sBrowser)
    EndIf
 
    If $sBrowser = "GoogleChrome" Then
-
        Local $sArch = ($sBit = "64") ? "win64" : "win32"
        $sUrl = "https://storage.googleapis.com/chrome-for-testing-public/" & $sVer & "/" & $sArch & "/chromedriver-" & $sArch & ".zip"
    ElseIf $sBrowser = "MSEdge" Then
@@ -64,7 +65,7 @@ Func UpdateWebDriver($sBrowser)
 
    Local $sZip = $g_sDriverPath & "\" & $sBrowser & "_driver.zip"
    If Not _DownloadWithRetry($sUrl, $sZip) Then
-       LogWrite("Error - Failed to download driver ZIP after multiple attempts: " & $sUrl)
+       LogWrite("Error - Failed to download driver ZIP after multiple attempts: " & $sUrl, True)
        Return
    EndIf
 
@@ -73,7 +74,7 @@ Func UpdateWebDriver($sBrowser)
    EndIf
    _ExtractZip($sZip, $g_sDriverPath, $sBrowser)
    FileDelete($sZip)
-   LogWrite($sBrowser & " webdriver updated successfully to version " & $sVer)
+   LogWrite($sBrowser & " webdriver updated successfully to version: " & $sVer, True)
 
 EndFunc
 
@@ -115,10 +116,13 @@ Func _ExtractZip($sZipFile, $sDestFolder, $sBrowser)
 EndFunc
 
 ; =================== Write Log messages ===================
-Func LogWrite($lMsg)
+Func LogWrite($lMsg, $Separator = False)
    Local $sTime = StringFormat("%02d/%02d/%04d %02d:%02d:%02d", @MDAY, @MON, @YEAR, @HOUR, @MIN, @SEC)
-   Local $hFile = FileOpen($g_sLogFile, 1) ; append mode
+   Local $hFile = FileOpen($g_sLogFile, 1) 
    If $hFile = -1 Then Return
    FileWriteLine($hFile, $sTime & " - " & $lMsg)
+   If $Separator Then
+		FileWriteLine($hFile, "========================================================================================")
+   EndIf
    FileClose($hFile)
 EndFunc
