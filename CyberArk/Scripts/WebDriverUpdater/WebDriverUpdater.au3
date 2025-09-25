@@ -6,10 +6,10 @@
 ;           -------------------------
 ; Description : Updates MSEdge and Chrome webdriver
 ; Created : 25.09.2025
-; © Abhishek Singh (FIL)
+; © Abhishek Singh
 ; Developed and compiled in AutoIt 3.3.14.1
 ;============================================================
-Global Const $g_sDriverPath = "D:\CyberArk\PSM"
+Global Const $g_sDriverPath = "D:\WebDrivers"
 Global Const $g_sLogFile = $g_sDriverPath & "\WebDriverUpdater_" & StringFormat("%02d-%02d-%04d", @MDAY, @MON, @YEAR) & ".log"
 
 ; ========== Check & Update Webdrivers ============
@@ -71,7 +71,7 @@ Func UpdateWebDriver($sBrowser)
    If FileExists($sDriverFile) Then
 	  FileDelete($sDriverFile)
    EndIf
-   _ExtractZip($sZip, $g_sDriverPath)
+   _ExtractZip($sZip, $g_sDriverPath, $sBrowser)
    FileDelete($sZip)
    LogWrite($sBrowser & " webdriver updated successfully to version " & $sVer)
 
@@ -91,12 +91,26 @@ Func _DownloadWithRetry($sUrl, $sDest, $iMaxRetries = 3, $iWaitSec = 5)
 EndFunc
 
 ; =================== Extract Zip using Shell.Application ===================
-Func _ExtractZip($sZipFile, $sDestFolder)
+Func _ExtractZip($sZipFile, $sDestFolder, $sBrowser)
    Local $oShell = ObjCreate("Shell.Application")
    If Not FileExists($sDestFolder) Then DirCreate($sDestFolder)
    Local $oZip = $oShell.NameSpace($sZipFile)
    If IsObj($oZip) Then
        $oShell.NameSpace($sDestFolder).CopyHere($oZip.Items, 4 + 16)
+   EndIf
+
+   If $sBrowser = "GoogleChrome" Then
+       Local $sSubFolder32 = $sDestFolder & "\chromedriver-win32\chromedriver.exe"
+       Local $sSubFolder64 = $sDestFolder & "\chromedriver-win64\chromedriver.exe"
+       If FileExists($sSubFolder32) Then
+           If FileExists($sDestFolder & "\chromedriver.exe") Then FileDelete($sDestFolder & "\chromedriver.exe")
+           FileMove($sSubFolder32, $sDestFolder & "\chromedriver.exe")
+           DirRemove($sDestFolder & "\chromedriver-win32", 1)
+       ElseIf FileExists($sSubFolder64) Then
+           If FileExists($sDestFolder & "\chromedriver.exe") Then FileDelete($sDestFolder & "\chromedriver.exe")
+           FileMove($sSubFolder64, $sDestFolder & "\chromedriver.exe")
+           DirRemove($sDestFolder & "\chromedriver-win64", 1)
+       EndIf
    EndIf
 EndFunc
 
