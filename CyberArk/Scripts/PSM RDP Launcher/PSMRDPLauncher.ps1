@@ -159,7 +159,7 @@ function Delete-RDPFile {
 
 ####################################################################################
 ## Main script starts here - script will terminate if any errors are encountered
-## Developed by: © Abhishek Singh (adapted)
+## Developed by: © Abhishek Singh
 ## Description:
 ##   - Uses servers.json and creds.json in script folder
 ##   - Generates .rdp files with embedded DPAPI blob for credentials
