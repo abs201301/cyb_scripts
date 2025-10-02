@@ -87,7 +87,9 @@ A sample servers.json structure:Usage
 ```
 
 	•	category: Grouping for tree view.
-	•	component: Connection component.
+	•	component: Friendly component/ technology server.
+	•	name: HostName as displayed in GUI.
+	•	target: HostName as onboarded in CyberArk.
 	•	targetAccount: Remote account to use.
 
 
