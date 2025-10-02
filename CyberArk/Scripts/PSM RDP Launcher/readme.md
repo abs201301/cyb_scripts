@@ -68,7 +68,7 @@ A sample servers.json structure:Usage
 ```
 {
  "Config": {
-   "PSMAddress": "psmrdp.bip.uk.fid-intl.com",
+   "PSMAddress": "psmlb.your.domain.com",
    "PSMPort": 3389,
    "LANID": "YourLANID",
    "ConnectionComponents": "PSM-RDP", "PSM-SSH",
