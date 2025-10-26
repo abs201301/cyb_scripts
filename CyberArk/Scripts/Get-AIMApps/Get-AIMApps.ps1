@@ -37,7 +37,6 @@ function Get-CCPPassword {
 
 # Variables used by AAM-CCP.
 $logpath = ".\Get-AIMApps.log"
-$domainName = "ACME"
 $CCP = "https://pvwa.acme.corp"
 $appID = "AIMAppID"
 $safe    = "AIMSafe"
@@ -47,7 +46,7 @@ $cert = 'c:\users\jdoe\cert.cer'
 [Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls12
 if (!(Test-Path $logpath -Type Leaf)) {New-Item -Path $logpath -Type File}
 $response = Get-CCPPassword -AppID $appID -Safe $safe -Object $Object
-$baseURL = "https://pvwa.acme.corp/PasswordVault"
+$baseURL = "$CCP/PasswordVault"
 $username = $response.Username
 $password = $response.Content
 
