@@ -37,7 +37,7 @@ function Get-CCPPassword {
 
 # Variables used by AAM-CCP.
 $logpath = ".\Get-AIMApps.log"
-$domainName = "INTL"
+$domainName = "ACME"
 $CCP = "https://pvwa.acme.corp"
 $appID = "AIMAppID"
 $safe    = "AIMSafe"
