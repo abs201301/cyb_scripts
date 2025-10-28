@@ -4,7 +4,7 @@ AutoItSetOption("WinTitleMatchMode", 3) ; EXACT_MATCH!
 
 ;============================================================
 ;           Generic Web Portal
-;           ------------------
+;           ----------------------------------------------------------
 ; Description : PSM Dispatcher for Websites
 ; Created : 26.03.2025
 ; Abhishek Singh
@@ -197,24 +197,15 @@ Func LaunchEdge()
 	$sScript = @AppDataDir & "\" & $Script_Name
 	Local $encodedPassword = _Base64Encode(StringToBinary($TargetPassword, 4))
 	If $AppName = "Azure"  or $AppName = "Github" or $AppName = "EPM" Then
+		Local $sUsername = (StringInStr(StringLower(StringStripWS($TargetUsername,3)), "@acme.corp") = 0) ? _
+                  StringStripWS($TargetUsername,3) & "@acme.corp" : StringStripWS($TargetUsername,3)
+		$sPSCmd = $PS_EXE & " -File "& '"'&$sScript &'" ' & $TargetAddress & ' ' & $sUsername & ' ' & $AppName & ' ' & $encodedPassword
 		Stop_Animation()
 		$Debug = "yes"
-		Local $Domain = "@acme.corp"
-		Local $trimmedUsername = StringStripWS($TargetUsername, 3)
-		Local $lower = StringLower($trimmedUsername)
-		If StringInStr($lower, $Domain) > 0 Then
-			Local $sUsername = $trimmedUsername
-		ElseIf StringInStr($trimmedUsername, "@") > 0 Then
-			Local $atPos = StringInStr($trimmedUsername, "@")
-			Local $localPart = StringLeft($trimmedUsername, $atPos - 1)
-			Local $sUsername = $localPart & $Domain
-		Else
-		Local $sUsername = $trimmedUsername & $Domain
-		EndIf
-		$sPSCmd = $PS_EXE & " -File "& '"'&$sScript &'" ' & $TargetAddress & ' ' & $sUsername & ' ' & $AppName & ' ' & $encodedPassword
 	Else
 		$sPSCmd = $PS_EXE & " -File "& '"'&$sScript &'" ' & $TargetAddress & ' ' & $TargetUsername & ' ' & $AppName & ' ' & $encodedPassword
 	EndIf
+
 	LogWrite("Sending connection string")
 	
 	If $TargetDomain <> "" Then
