@@ -7,6 +7,36 @@ function LogWrite {
    }
 }
 
+function Auth-Prompt {
+   param (
+       [Parameter(Mandatory = $true)]
+       [OpenQA.Selenium.IWebDriver]$Driver
+   )
+   $authCode = $null
+   $numberCodeElement = WaitForElement -driver $Driver -timeoutInSeconds 5 -locatorValue "//*[@id='idRichContext_DisplaySign']"
+   if ($numberCodeElement) {
+       $codeText = $numberCodeElement.Text
+       $numberMatch = [regex]::Match($codeText, '\d{2,3}')
+       if ($numberMatch.Success) {
+           $authCode = $numberMatch.Value
+           LogWrite -Msg " Found Authenticator code: $authCode"
+           if (Number-Matching -AuthCode $authCode -Driver $Driver) {
+               LogWrite -Msg " MFA approved — proceeding with login."
+               return $true
+           } else {
+               LogWrite -Msg " MFA step timed out or not completed."
+               return $false
+           }
+       } else {
+           LogWrite -Msg " Found potential MFA page but no numeric code."
+           return $false
+       }
+   } else {
+       LogWrite -Msg " No MFA number-matching prompt detected — skipping."
+       return $false
+   }
+}
+
 function Number-Matching {
    param (
        [Parameter(Mandatory = $true)]
@@ -150,24 +180,14 @@ function Login-Azure {
 	    } else {
 		    LogWrite -Msg " Submit button not found"
 	    }
-        $numberCodeElement = WaitForElement -driver $Driver -timeoutInSeconds 10 -locatorValue "//*[@id='idRichContext_DisplaySign']"
-        if ($numberCodeElement) {
-           $codeText = $numberCodeElement.Text
-           $numberMatch = [regex]::Match($codeText, '\d{2,3}')
-           if ($numberMatch.Success) {
-               $authCode = $numberMatch.Value
-               LogWrite -Msg " Found Authenticator code: $authCode"
-            } else {
-               LogWrite -Msg " No number matching prompt detected"
-            }
-        }
-        if (Number-Matching -AuthCode $authCode -Driver $Driver) {
-            LogWrite -Msg " MFA approved — proceeding with login."
+
+        if (Auth-Prompt -Driver $Driver) {
+            LogWrite -Msg " Authenticator prompt handled successfully."
         } else {
-            LogWrite -Msg " MFA step timed out or not completed."
+            LogWrite -Msg " Continuing login — no MFA prompt detected."
         }
-        If (-not $appName -match "EPM") { 
-           $submitButton = WaitForElement -driver $Driver -timeoutInSeconds 20 -locatorValue "//*[@type='submit' or @id='idSIButton9']"
+        If ($appName -notmatch "EPM") { 
+           $submitButton = WaitForElement -driver $Driver -timeoutInSeconds 5 -locatorValue "//*[@type='submit' or @id='idSIButton9']"
             if ($submitButton) {
 		        LogWrite -Msg " Found the submit button"
 		        $submitButton.Click()
