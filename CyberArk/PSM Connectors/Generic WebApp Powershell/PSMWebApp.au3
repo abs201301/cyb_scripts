@@ -4,7 +4,7 @@ AutoItSetOption("WinTitleMatchMode", 3) ; EXACT_MATCH!
 
 ;============================================================
 ;           Generic Web Portal
-;           -------------------
+;           ------------------
 ; Description : PSM Dispatcher for Websites
 ; Created : 26.03.2025
 ; Abhishek Singh
@@ -16,8 +16,7 @@ AutoItSetOption("WinTitleMatchMode", 3) ; EXACT_MATCH!
 #include "PSMGenericClientWrapper.au3"
 #include <GUIConstantsEx.au3>
 #include <WindowsConstants.au3>
-#include <ProgressConstants.au3>
-#include <ColorConstants.au3>
+#include <CyberArkPSMAnimation.au3>
 #include <StaticConstants.au3>
 #include <AutoItConstants.au3>
 #include <Crypt.au3>
@@ -57,53 +56,30 @@ Global $Debug = "N"
 ;=======================================
 Exit Main()
 
-; #FUNCTION# ====================================================================================================================
-; Name...........: FetchSessionProperties
-; Description ...: Fetches properties required for the session from the PSM
-; Parameters ....: None
-; Return values .: None
-; ===============================================================================================================================
+;==============================
+; Session Property Helper function
+;==============================
+Func GetSessionProperty($key, ByRef $outVar, $default = "")
+   If (PSMGenericClient_GetSessionProperty($key, $outVar) <> $PSM_ERROR_SUCCESS) Then
+       If $default <> "" Then
+           $outVar = $default
+       Else
+           Error(PSMGenericClient_PSMGetLastErrorString())
+       EndIf
+   EndIf
+EndFunc
+
 Func FetchSessionProperties()
-
-	If (PSMGenericClient_GetSessionProperty("Username", $TargetUsername) <> $PSM_ERROR_SUCCESS) Then
-		Error(PSMGenericClient_PSMGetLastErrorString())
-	EndIf
-
-	If (PSMGenericClient_GetSessionProperty("Password", $TargetPassword) <> $PSM_ERROR_SUCCESS) Then
-		Error(PSMGenericClient_PSMGetLastErrorString())
-	EndIf
-	
-	if (PSMGenericClient_GetSessionProperty("Address", $TargetAddress) <> $PSM_ERROR_SUCCESS) Then
-		Error(PSMGenericClient_PSMGetLastErrorString())
-	EndIf
-	
-	if (PSMGenericClient_GetSessionProperty("PSMRemoteMachine", $RemoteMachine) <> $PSM_ERROR_SUCCESS) Then
-		LogWrite("PSMRemoteMachine is not defined")
-	EndIf
-	
-	if (PSMGenericClient_GetSessionProperty("LogonDomain", $TargetDomain) <> $PSM_ERROR_SUCCESS) Then
-		LogWrite("LogonDomain parameter is missing")
-	EndIf
-	
-	if (PSMGenericClient_GetSessionProperty("AppName", $AppName) <> $PSM_ERROR_SUCCESS) Then
-		Error(PSMGenericClient_PSMGetLastErrorString())
-	EndIf
-	
-	if (PSMGenericClient_GetSessionProperty("PS_EXE", $PS_EXE) <> $PSM_ERROR_SUCCESS) Then
-		Error(PSMGenericClient_PSMGetLastErrorString())
-	EndIf
-	
-	if (PSMGenericClient_GetSessionProperty("Script_Path", $Script_Path) <> $PSM_ERROR_SUCCESS) Then
-		Error(PSMGenericClient_PSMGetLastErrorString())
-	EndIf
-	
-	if (PSMGenericClient_GetSessionProperty("Script_Name", $Script_Name) <> $PSM_ERROR_SUCCESS) Then
-		Error(PSMGenericClient_PSMGetLastErrorString())
-	EndIf
-	
-	If (PSMGenericClient_GetSessionProperty("DEBUG", $Debug) <> $PSM_ERROR_SUCCESS) Then
-		$Debug = "N"
-	EndIf
+   GetSessionProperty("Username", $TargetUsername)
+   GetSessionProperty("Password", $TargetPassword)
+   GetSessionProperty("Address", $TargetAddress)
+   GetSessionProperty("PSMRemoteMachine", $RemoteMachine, LogWrite("LogonDomain parameter is missing"))
+   GetSessionProperty("LogonDomain", $TargetDomain, LogWrite("LogonDomain parameter is missing"))
+   GetSessionProperty("AppName", $AppName)
+   GetSessionProperty("PS_EXE", $PS_EXE)
+   GetSessionProperty("Script_Path", $Script_Path)
+   GetSessionProperty("Script_Name", $Script_Name)
+   GetSessionProperty("DEBUG", $Debug, "N")
 EndFunc
 
 ;=======================================
@@ -112,41 +88,31 @@ EndFunc
 Func Main()
 	; Init PSM Dispatcher utils wrapper
 
-	If (PSMGenericClient_Init() <> $PSM_ERROR_SUCCESS) Then
-		Error(PSMGenericClient_PSMGetLastErrorString())
-	EndIf
-
+	If (PSMGenericClient_Init() <> $PSM_ERROR_SUCCESS) Then Error(PSMGenericClient_PSMGetLastErrorString())
 	LogWrite("Successfully initialized Dispatcher Utils Wrapper")
 	LogWrite("Mapping local drives")
-
-	If (PSMGenericClient_MapTSDrives() <> $PSM_ERROR_SUCCESS) Then
-		Error(PSMGenericClient_PSMGetLastErrorString())
-	EndIf
+	If (PSMGenericClient_MapTSDrives() <> $PSM_ERROR_SUCCESS) Then Error(PSMGenericClient_PSMGetLastErrorString())
 
 	FetchSessionProperties()
 	$ERROR_MESSAGE_TITLE  	= "PSM " & $AppName & " Dispatcher error message"
 	$LOG_MESSAGE_PREFIX 		= $AppName & " Dispatcher - "
 	
-	If Not Is($Debug) Then
-		HideWindow()
-	EndIf
-
-	LogWrite("Starting selenium wrapper")
+	If Not IsTrue($Debug) Then Start_Animation("Progress")
+	LogWrite("Starting progress animation")
 	
 	$ConnectionClientPID  = LaunchEdge()
 	LogWrite("Finished LoginProcess() successfully")
 	LogWrite("sending PID to PSM")
+	LogWrite("Stoping progess animation")
+	
+	If Not IsTrue($Debug) Then Stop_Animation()
 
-	If Not Is($Debug) Then
-		ShowWindow()
-	EndIf
 	If (PSMGenericClient_SendPID($ConnectionClientPID) <> $PSM_ERROR_SUCCESS) Then
 		Error(PSMGenericClient_PSMGetLastErrorString())
     EndIf
-	
 	LogWrite("Terminating Dispatcher Utils Wrapper")
 	PSMGenericClient_Term()
-	
+
 	Return $PSM_ERROR_SUCCESS
 EndFunc
 
@@ -179,7 +145,7 @@ Func Error($ErrorMessage, $Code = -1)
 
 EndFunc
 
-Func Is($var)
+Func IsTrue($var)
    $var = StringLower($var)
    If $var == "yes" Or $var == "y" Or $var == "true" Then
        Return True
@@ -190,41 +156,6 @@ Func Is($var)
    Return False
 EndFunc
 
-Func HideWindow()
-
-	Global $hGUI, $screenWidth, $screenHeight, $sMessage, $labelWidth, $labelHeight, $labelX, $labelY, $hLabel, $progressWidth, $progressHeight, $progressX, $progressY, $hProgress, $hPercentage
-	$screenWidth = @DesktopWidth
-	$screenHeight = @DesktopHeight
-	$hGUI = GUICreate($LOG_MESSAGE_PREFIX, $screenWidth, $screenHeight, 0, 0, $WS_POPUP, $WS_EX_TOPMOST)
-	GUICtrlCreateLabel("", 0, 0, $screenWidth, $screenHeight)
-	GUICtrlSetBkColor(-1, 0x000000)
-	$sMessage = "Please wait while we log you in..."
-	$labelWidth = 400
-	$labelHeight = 40
-	$labelX = ($screenWidth - $labelWidth) / 2
-	$labelY = ($screenHeight - $labelHeight) / 2 - 50
-	$hLabel = GUICtrlCreateLabel($sMessage, $labelX, $labelY, $labelWidth, $labelHeight, $SS_CENTER)
-	GUICtrlSetFont($hLabel, 12, 700)
-	GUICtrlSetColor($hLabel, 0xFFFFFF)
-	GUICtrlSetBkColor($hLabel, 0x000000)
-	$progressWidth = 400
-	$progressHeight = 20
-	$progressX = ($screenWidth - $progressWidth) / 2
-	$progressY = $labelY + 50
-	$hProgress = GUICtrlCreateProgress($progressX, $progressY, $progressWidth, $progressHeight, $PBS_SMOOTH)
-	GUICtrlSetColor($hProgress, 0xFFFFFF)
-	$hPercentage = GUICtrlCreateLabel("0%", $progressX, $progressY - 25, $progressWidth, 20, $SS_CENTER)
-	GUICtrlSetFont($hPercentage, 12, 700)
-	GUICtrlSetColor($hPercentage, 0xFFFFFF)
-	GUICtrlSetBkColor($hPercentage, $GUI_BKCOLOR_TRANSPARENT)
-	GUISetState(@SW_SHOW)
-	
-EndFunc
-
-Func ShowWindow()
-	GUIDelete($hGUI)
-EndFunc
-	
 
 ; #FUNCTION# ====================================================================================================================
 ; Name...........: LogWrite
@@ -265,12 +196,10 @@ Func LaunchEdge()
 	
 	$sScript = @AppDataDir & "\" & $Script_Name
 	Local $encodedPassword = _Base64Encode(StringToBinary($TargetPassword, 4))
-	If $AppName = "Azure" Then
-		Local $sUsername = $TargetUsername & "@<Domain>"
-		Local $sAddress = "myapps.microsoft.com"
-		$sPSCmd = $PS_EXE & " -File "& '"'&$sScript &'" ' & $sAddress & ' ' & $sUsername & ' ' & $AppName & ' ' & $encodedPassword
-	ElseIf $AppName = "Github" Then
-		Local $sUsername = $TargetUsername & "@<Domain>"
+	If $AppName = "Azure"  or $AppName = "Github" or $AppName = "EPM" Then
+		Stop_Animation()
+		$Debug = "yes"
+		Local $sUsername = $TargetUsername & "@acme.corp"
 		$sPSCmd = $PS_EXE & " -File "& '"'&$sScript &'" ' & $TargetAddress & ' ' & $sUsername & ' ' & $AppName & ' ' & $encodedPassword
 	Else
 		$sPSCmd = $PS_EXE & " -File "& '"'&$sScript &'" ' & $TargetAddress & ' ' & $TargetUsername & ' ' & $AppName & ' ' & $encodedPassword
@@ -287,25 +216,6 @@ Func LaunchEdge()
 	
 	If $iPID == 0 Then
 		Error("Error running scipt: " & @error & " - " & PSMGenericClient_PSMGetLastErrorString())
-	EndIf
-	
-	If Not Is($Debug) Then
-		Local $progressDone = False
-		For $i = 1 To 100
-			If ProcessExists($iPID) Then
-				GUICtrlSetData($hProgress, $i / 2)
-				GUICtrlSetData($hPercentage, int($i / 2) & "%")
-				Sleep(75)
-			Else
-				$progressDone = True
-				ExitLoop
-			EndIf
-		Next
-	
-		If $progressDone = False Then
-			GUICtrlSetData($hProgress, 100)
-			GUICtrlSetData($hPercentage, "100%")
-		EndIf
 	EndIf
 
 	While ProcessExists($iPID)
