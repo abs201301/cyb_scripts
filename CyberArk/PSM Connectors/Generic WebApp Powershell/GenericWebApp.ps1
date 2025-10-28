@@ -7,6 +7,57 @@ function LogWrite {
    }
 }
 
+function Number-Matching {
+   param (
+       [Parameter(Mandatory = $true)]
+       [string]$AuthCode,
+       [Parameter(Mandatory = $true)]
+       [OpenQA.Selenium.IWebDriver]$Driver,
+       [int]$Timeout = 20
+   )
+   Add-Type -AssemblyName System.Windows.Forms
+   Add-Type -AssemblyName System.Drawing
+
+   $form = New-Object System.Windows.Forms.Form
+   $form.Text = "Authenticator Prompt"
+   $form.StartPosition = "CenterScreen"
+   $form.TopMost = $true
+   $form.Width = 420
+   $form.Height = 140
+   $form.BackColor = [System.Drawing.Color]::White
+   $label = New-Object System.Windows.Forms.Label
+   $label.Text = "Please open Microsoft Authenticator on your phone and enter number: $AuthCode"
+   $label.AutoSize = $true
+   $label.Left = 30
+   $label.Top = 35
+   $label.Font = New-Object System.Drawing.Font("Segoe UI", 10)
+   $form.Controls.Add($label)
+   $null = $form.Show()
+   $endTime = (Get-Date).AddSeconds($Timeout)
+   $result = $false
+   while ((Get-Date) -lt $endTime) {
+       Start-Sleep -Seconds 1
+       try {
+           $stillVisible = $Driver.FindElement([OpenQA.Selenium.By]::Id("idRichContext_DisplaySign")).Count -gt 0
+           $staySignedIn = $Driver.FindElement([OpenQA.Selenium.By]::XPath("//*[contains(text(),'Stay signed in')]")).Count -gt 0
+           if (-not $stillVisible -or $staySignedIn) {
+               $result = $true
+               break
+           }
+       } catch {
+           $result = $true
+           break
+       }
+   }
+   try {
+       for ($i = 1; $i -le 10; $i++) {
+           $form.Opacity = 1 - ($i * 0.1)
+           Start-Sleep -Milliseconds 50
+       }
+       $form.Close()
+   } catch {}
+   return $result
+}
 # Function to wait until an element is visible
 function WaitForElement {
     param (
@@ -107,15 +158,14 @@ function Login-Azure {
            if ($numberMatch.Success) {
                $authCode = $numberMatch.Value
                LogWrite -Msg " Found Authenticator code: $authCode"
-               [System.Windows.Forms.MessageBox]::Show(
-               "Please open Microsoft Authenticator on your phone and enter number: $authCode",
-               "Authenticator Prompt",
-               [System.Windows.Forms.MessageBoxButtons]::OK,
-               [System.Windows.Forms.MessageBoxIcon]::Information
-               )
             } else {
                LogWrite -Msg " No number matching prompt detected"
             }
+        }
+        if (Number-Matching -AuthCode $authCode -Driver $Driver) {
+            LogWrite -Msg " MFA approved — proceeding with login."
+        } else {
+            LogWrite -Msg " MFA step timed out or not completed."
         }
         If (-not $appName -match "EPM") { 
            $submitButton = WaitForElement -driver $Driver -timeoutInSeconds 20 -locatorValue "//*[@type='submit' or @id='idSIButton9']"
