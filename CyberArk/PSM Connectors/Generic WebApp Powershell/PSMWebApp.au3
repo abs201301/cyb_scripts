@@ -4,7 +4,7 @@ AutoItSetOption("WinTitleMatchMode", 3) ; EXACT_MATCH!
 
 ;============================================================
 ;           Generic Web Portal
-;           ----------------------------------------------------------
+;           ------------------
 ; Description : PSM Dispatcher for Websites
 ; Created : 26.03.2025
 ; Abhishek Singh
@@ -70,16 +70,23 @@ Func GetSessionProperty($key, ByRef $outVar, $default = "")
 EndFunc
 
 Func FetchSessionProperties()
-   GetSessionProperty("Username", $TargetUsername)
-   GetSessionProperty("Password", $TargetPassword)
-   GetSessionProperty("Address", $TargetAddress)
-   GetSessionProperty("PSMRemoteMachine", $RemoteMachine, LogWrite("LogonDomain parameter is missing"))
-   GetSessionProperty("LogonDomain", $TargetDomain, LogWrite("LogonDomain parameter is missing"))
-   GetSessionProperty("AppName", $AppName)
-   GetSessionProperty("PS_EXE", $PS_EXE)
-   GetSessionProperty("Script_Path", $Script_Path)
-   GetSessionProperty("Script_Name", $Script_Name)
-   GetSessionProperty("DEBUG", $Debug, "N")
+	Local $Email = ""
+	If (PSMGenericClient_GetSessionProperty("Email", $Email) = $PSM_ERROR_SUCCESS And $Email <> "") Then
+		$TargetUsername = $Email
+		LogWrite("Using Email as username: " & $TargetUsername)
+	Else
+		GetSessionProperty("Username", $TargetUsername)
+		LogWrite("Using Username parameter: " & $TargetUsername)
+	EndIf
+	GetSessionProperty("Password", $TargetPassword)
+	GetSessionProperty("Address", $TargetAddress)
+	GetSessionProperty("PSMRemoteMachine", $RemoteMachine, LogWrite("LogonDomain parameter is missing"))
+	GetSessionProperty("LogonDomain", $TargetDomain, LogWrite("LogonDomain parameter is missing"))
+	GetSessionProperty("AppName", $AppName)
+	GetSessionProperty("PS_EXE", $PS_EXE)
+	GetSessionProperty("Script_Path", $Script_Path)
+	GetSessionProperty("Script_Name", $Script_Name)
+	GetSessionProperty("DEBUG", $Debug, "N")
 EndFunc
 
 ;=======================================
