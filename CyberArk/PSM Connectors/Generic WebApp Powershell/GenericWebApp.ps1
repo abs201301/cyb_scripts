@@ -13,11 +13,11 @@ function Number-Matching {
        [string]$AuthCode,
        [Parameter(Mandatory = $true)]
        [OpenQA.Selenium.IWebDriver]$Driver,
-       [int]$Timeout = 20
+       [int]$Timeout = 60
    )
    Add-Type -AssemblyName System.Windows.Forms
    Add-Type -AssemblyName System.Drawing
-
+   $initialUrl = $Driver.Url
    $form = New-Object System.Windows.Forms.Form
    $form.Text = "Authenticator Prompt"
    $form.StartPosition = "CenterScreen"
@@ -26,7 +26,7 @@ function Number-Matching {
    $form.Height = 140
    $form.BackColor = [System.Drawing.Color]::White
    $label = New-Object System.Windows.Forms.Label
-   $label.Text = "Please open Microsoft Authenticator on your phone and enter number: $AuthCode"
+   $label.Text = "Enter number: $AuthCode in the authenticator app"
    $label.AutoSize = $true
    $label.Left = 30
    $label.Top = 35
@@ -38,9 +38,8 @@ function Number-Matching {
    while ((Get-Date) -lt $endTime) {
        Start-Sleep -Seconds 1
        try {
-           $stillVisible = $Driver.FindElement([OpenQA.Selenium.By]::Id("idRichContext_DisplaySign")).Count -gt 0
-           $staySignedIn = $Driver.FindElement([OpenQA.Selenium.By]::XPath("//*[contains(text(),'Stay signed in')]")).Count -gt 0
-           if (-not $stillVisible -or $staySignedIn) {
+           $currentUrl = $Driver.Url
+           if ($currentUrl -ne $initialUrl) {
                $result = $true
                break
            }
