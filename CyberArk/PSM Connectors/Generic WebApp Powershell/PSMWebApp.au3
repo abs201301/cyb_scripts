@@ -199,7 +199,18 @@ Func LaunchEdge()
 	If $AppName = "Azure"  or $AppName = "Github" or $AppName = "EPM" Then
 		Stop_Animation()
 		$Debug = "yes"
-		Local $sUsername = $TargetUsername & "@acme.corp"
+		Local $Domain = "@acme.corp"
+		Local $trimmedUsername = StringStripWS($TargetUsername, 3)
+		Local $lower = StringLower($trimmedUsername)
+		If StringInStr($lower, $Domain) > 0 Then
+			Local $sUsername = $trimmedUsername
+		ElseIf StringInStr($trimmedUsername, "@") > 0 Then
+			Local $atPos = StringInStr($trimmedUsername, "@")
+			Local $localPart = StringLeft($trimmedUsername, $atPos - 1)
+			Local $sUsername = $localPart & $Domain
+		Else
+		Local $sUsername = $trimmedUsername & $Domain
+		EndIf
 		$sPSCmd = $PS_EXE & " -File "& '"'&$sScript &'" ' & $TargetAddress & ' ' & $sUsername & ' ' & $AppName & ' ' & $encodedPassword
 	Else
 		$sPSCmd = $PS_EXE & " -File "& '"'&$sScript &'" ' & $TargetAddress & ' ' & $TargetUsername & ' ' & $AppName & ' ' & $encodedPassword
