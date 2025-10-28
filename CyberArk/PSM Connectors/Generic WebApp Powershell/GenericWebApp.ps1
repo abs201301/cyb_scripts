@@ -1,3 +1,11 @@
+function LogWrite {
+   param(
+       [string]$Msg
+   )
+   If ($Msg) {
+      Add-Content -Path $logpath -Value ((Get-Date -Format "dd/MM/yyyy HH:mm") + $Msg)
+   }
+}
 
 # Function to wait until an element is visible
 function WaitForElement {
@@ -21,7 +29,6 @@ function WaitForElement {
             continue
         }
     }
-
 }
 
 function EndScript
@@ -31,7 +38,7 @@ function EndScript
 	$Driver.close()
 	$Driver.quit()
 	
-	Add-Content -Path $logpath -Value ((Get-Date -Format "yyyy/MM/dd HH:mm") + " $Output")
+	LogWrite -Msg " $Output"
     return 'PowerShell Script Ended'
 }
 
@@ -43,68 +50,91 @@ function Login-Azure {
         $AppName
     )
     If ($appName -match "Github") {
-        Add-Content -Path $logpath -Value ((Get-Date -Format "yyyy/MM/dd HH:mm") + " Logging into Github")
+        LogWrite -Msg " Logging into Github"
         $continueText = WaitForElement -driver $Driver -timeoutInSeconds 20 -locatorValue "//*[text() = 'Continue']"
         If ($continueText) {
             $continueText.Click()   
         }
     } Else {
-        Add-Content -Path $logpath -Value ((Get-Date -Format "yyyy/MM/dd HH:mm") + " Logging into Azure MyApps Portal")
+        LogWrite -Msg " Logging into Azure MyApps Portal"
     } 
-      
+    If ($appName -match "EPM") {
+        LogWrite -Msg " Logging into BeyondTrust EPM"
+        $button = WaitForElement -driver $Driver -timeoutInSeconds 20 -locatorValue "//*[@id='test-login-button']"
+        If ($button) {
+            $button.Click()   
+        }
+    }
    try {
         $usernameField = WaitForElement -driver $Driver -timeoutInSeconds 20 -locatorValue "//*[@id = 'i0116']"
         If ($usernameField) {
-            Add-Content -Path $logpath -Value ((Get-Date -Format "yyyy/MM/dd HH:mm") + " Found the username field")
+            LogWrite -Msg " Found the username field"
             $usernameField.SendKeys($strUserName)
-            Add-Content -Path $logpath -Value ((Get-Date -Format "yyyy/MM/dd HH:mm") + " Filled the username field")
+            LogWrite -Msg " Filled the username field"
    	    } else {
-		    Add-Content -Path $logpath -Value ((Get-Date -Format "yyyy/MM/dd HH:mm") + " Username field not found")
+		    LogWrite -Msg " Username field not found"
 	    }
 
         $submitButton = WaitForElement -driver $Driver -timeoutInSeconds 20 -locatorValue "//*[@type='submit' or @id='idSIButton9']"
         if ($submitButton) {
-		    Add-Content -Path $logpath -Value ((Get-Date -Format "yyyy/MM/dd HH:mm") + " Found the submit button")
+		    LogWrite -Msg " Found the submit button"
 		    $submitButton.Click()
-		    Add-Content -Path $logpath -Value ((Get-Date -Format "yyyy/MM/dd HH:mm") + " Clicked the submit button")
+		    LogWrite -Msg " Clicked the submit button"
 	    } else {
-		    Add-Content -Path $logpath -Value ((Get-Date -Format "yyyy/MM/dd HH:mm") + " Submit button not found")
+		    LogWrite -Msg " Submit button not found"
 	    }
 
         $passwordField = WaitForElement -driver $Driver -timeoutInSeconds 20 -locatorValue "//*[@id='i0118' or contains(@placeholder, 'Password')]"
         if ($passwordField) {
-		    Add-Content -Path $logpath -Value ((Get-Date -Format "yyyy/MM/dd HH:mm") + " Found the password field")
+		    LogWrite -Msg " Found the password field"
 		    $passwordField.SendKeys($strPwd)
-		    Add-Content -Path $logpath -Value ((Get-Date -Format "yyyy/MM/dd HH:mm") + " Filled the password field")
+		    LogWrite -Msg " Filled the password field"
 	    } else {
-		    Add-Content -Path $logpath -Value ((Get-Date -Format "yyyy/MM/dd HH:mm") + " Password field not found")
+		    LogWrite -Msg " Password field not found"
 	    }
-
         $submitButton = WaitForElement -driver $Driver -timeoutInSeconds 20 -locatorValue "//*[@type='submit' or @id='idSIButton9']"
         if ($submitButton) {
-		    Add-Content -Path $logpath -Value ((Get-Date -Format "yyyy/MM/dd HH:mm") + " Found the submit button")
+		    LogWrite -Msg " Found the submit button"
 		    $submitButton.Click()
-		    Add-Content -Path $logpath -Value ((Get-Date -Format "yyyy/MM/dd HH:mm") + " Clicked the submit button")
+		    LogWrite -Msg " Clicked the submit button"
 	    } else {
-		    Add-Content -Path $logpath -Value ((Get-Date -Format "yyyy/MM/dd HH:mm") + " Submit button not found")
+		    LogWrite -Msg " Submit button not found"
 	    }
-
-        $submitButton = WaitForElement -driver $Driver -timeoutInSeconds 20 -locatorValue "//*[@type='submit' or @id='idSIButton9']"
-        if ($submitButton) {
-		    Add-Content -Path $logpath -Value ((Get-Date -Format "yyyy/MM/dd HH:mm") + " Found the submit button")
-		    $submitButton.Click()
-		    Add-Content -Path $logpath -Value ((Get-Date -Format "yyyy/MM/dd HH:mm") + " Clicked the submit button")
-	    } else {
-		    Add-Content -Path $logpath -Value ((Get-Date -Format "yyyy/MM/dd HH:mm") + " Submit button not found")
+        $numberCodeElement = WaitForElement -driver $Driver -timeoutInSeconds 10 -locatorValue "//*[@id='idRichContext_DisplaySign']"
+        if ($numberCodeElement) {
+           $codeText = $numberCodeElement.Text
+           $numberMatch = [regex]::Match($codeText, '\d{2,3}')
+           if ($numberMatch.Success) {
+               $authCode = $numberMatch.Value
+               LogWrite -Msg " Found Authenticator code: $authCode"
+               [System.Windows.Forms.MessageBox]::Show(
+               "Please open Microsoft Authenticator on your phone and enter number: $authCode",
+               "Authenticator Prompt",
+               [System.Windows.Forms.MessageBoxButtons]::OK,
+               [System.Windows.Forms.MessageBoxIcon]::Information
+               )
+            } else {
+               LogWrite -Msg " No number matching prompt detected"
+            }
+        }
+        If (-not $appName -match "EPM") { 
+           $submitButton = WaitForElement -driver $Driver -timeoutInSeconds 20 -locatorValue "//*[@type='submit' or @id='idSIButton9']"
+            if ($submitButton) {
+		        LogWrite -Msg " Found the submit button"
+		        $submitButton.Click()
+		        LogWrite -Msg " Clicked the submit button"
+	        } else {
+		        LogWrite -Msg " Submit button not found"
+            }
 	    }
 	Start-Sleep -Seconds 1
     } catch {
-	    Add-Content -Path $logpath -Value ((Get-Date -Format "yyyy/MM/dd HH:mm") + " An exception has occurred!")
-	    Add-Content -Path $logpath -Value ((Get-Date -Format "yyyy/MM/dd HH:mm") + " Exception Type: $($_.Exception.GetType().FullName)")
-	    Add-Content -Path $logpath -Value ((Get-Date -Format "yyyy/MM/dd HH:mm") + " Exception Message: $($_.Exception.Message)")
+	    LogWrite -Msg " An exception has occurred!"
+	    LogWrite -Msg " Exception Type: $($_.Exception.GetType().FullName)"
+	    LogWrite -Msg " Exception Message: $($_.Exception.Message)"
 	    EndScript 'Exception has occurred ' 1 
     } finally {
-	    Add-Content -Path $logpath -Value ((Get-Date -Format "yyyy/MM/dd HH:mm") + " Script finished")
+	    LogWrite -Msg " Script finished"
     }	
         
 }
@@ -115,56 +145,47 @@ function Login-Default {
         $Password,
         $AppName
     )
-    Add-Content -Path $logpath -Value ((Get-Date -Format "yyyy/MM/dd HH:mm") + " Logging into ${appName}")
+    LogWrite -Msg " Logging into ${appName}"
     try {
 	    # Locate username field by id, name, or placeholder
 	    $usernameField = WaitForElement -driver $Driver -timeoutInSeconds 20 -locatorValue $usernameXPath
 
 	    If ($usernameField) {
-		    Write-Host "Found the username field."
-		    Add-Content -Path $logpath -Value ((Get-Date -Format "yyyy/MM/dd HH:mm") + " Found the username field")
+		    LogWrite -Msg " Found the username field"
 		    $usernameField.SendKeys($strUserName)
-		    Write-Host "Filled the username field."
-		    Add-Content -Path $logpath -Value ((Get-Date -Format "yyyy/MM/dd HH:mm") + " Filled the username field")
+		    LogWrite -Msg " Filled the username field"
 	    } else {
-		    Write-Host "Username field not found."
-		    Add-Content -Path $logpath -Value ((Get-Date -Format "yyyy/MM/dd HH:mm") + " Username field not found")
+		    LogWrite -Msg " Username field not found"
 	    }
 
 	    # Locate password field by id, name, or placeholder
 	    $passwordField = WaitForElement -driver $Driver -timeoutInSeconds 20 -locatorValue $passwordXPath
 
 	    if ($passwordField) {
-		    Write-Host "Found the password field."
-		    Add-Content -Path $logpath -Value ((Get-Date -Format "yyyy/MM/dd HH:mm") + " Found the password field")
+		    LogWrite -Msg " Found the password field"
 		    $passwordField.SendKeys($strPwd)
-		    Write-Host "Filled the password field."
-		    Add-Content -Path $logpath -Value ((Get-Date -Format "yyyy/MM/dd HH:mm") + " Filled the password field")
+		    LogWrite -Msg " Filled the password field"
 	    } else {
-		    Write-Host "Password field not found."
-		    Add-Content -Path $logpath -Value ((Get-Date -Format "yyyy/MM/dd HH:mm") + " Password field not found")
+		    LogWrite -Msg " Password field not found"
 	    }
 
 	    # Locate and click the submit button
 	    $submitButton = WaitForElement -driver $Driver -timeoutInSeconds 20 -locatorValue $submitButtonXPath
 	    if ($submitButton) {
-		    Write-Host "Found the submit button."
-		    Add-Content -Path $logpath -Value ((Get-Date -Format "yyyy/MM/dd HH:mm") + " Found the submit button")
+		    LogWrite -Msg " Found the submit button"
 		    $submitButton.Click()
-		    Write-Host "Clicked the submit button."
-		    Add-Content -Path $logpath -Value ((Get-Date -Format "yyyy/MM/dd HH:mm") + " Clicked the submit button")
+		    LogWrite -Msg " Clicked the submit button"
 	    } else {
-		    Write-Host "Submit button not found."
-		    Add-Content -Path $logpath -Value ((Get-Date -Format "yyyy/MM/dd HH:mm") + " Submit button not found")
+		    LogWrite -Msg " Submit button not found"
 	    }
 	Start-Sleep -Seconds 1
     } catch {
-	    Add-Content -Path $logpath -Value ((Get-Date -Format "yyyy/MM/dd HH:mm") + " An exception has occurred!")
-	    Add-Content -Path $logpath -Value ((Get-Date -Format "yyyy/MM/dd HH:mm") + " Exception Type: $($_.Exception.GetType().FullName)")
-	    Add-Content -Path $logpath -Value ((Get-Date -Format "yyyy/MM/dd HH:mm") + " Exception Message: $($_.Exception.Message)")
+	    LogWrite -Msg " An exception has occurred!"
+	    LogWrite -Msg " Exception Type: $($_.Exception.GetType().FullName)"
+	    LogWrite -Msg " Exception Message: $($_.Exception.Message)"
 	    EndScript 'Exception has occurred ' 1 
     } finally {
-	    Add-Content -Path $logpath -Value ((Get-Date -Format "yyyy/MM/dd HH:mm") + " Script finished")
+	    LogWrite -Msg " Script finished"
     }	
 }
 
@@ -173,7 +194,7 @@ function Login-Default {
 ## Main script starts here - script will terminate if any errors are encountered ##
 #============================================================
 #         PSM Wrapper for Selenium webdriver
-#        -------------------------------------
+#          ---------------------------------------------------
 # Description : PSM Web Applications
 # Created : Nov 06, 2024
 # Abhishek Singh
@@ -236,19 +257,20 @@ $submitButtonXPath = "//*[@type='submit' or @id='login-submission-button' or @id
 
 #Create log file if needed and start logging
 if (!(Test-Path $logpath -Type Leaf)) {New-Item -Path $logpath -Type File}
-Add-Content -Path $logpath -Value ((Get-Date -Format "yyyy/MM/dd HH:mm") + " Script started")
+LogWrite -Msg " Script started"
 
 			
-# Start Edge and load URL
+# Start a Edge tab and load URL
   
 $EdgeOptions.AddArgument("--app=$FullLoginURL")
 $Driver = New-Object OpenQA.Selenium.Edge.EdgeDriver($EdgeOptions)
-Add-Content -Path $logpath -Value ((Get-Date -Format "yyyy/MM/dd HH:mm") + " Args: ${strUserName}, ${appName}, ${FullLoginURL}")
+LogWrite -Msg " Args: ${strUserName}, ${appName}, ${FullLoginURL}"
 
 Start-Sleep -Seconds 1
 
-If ($appName -match "Azure" -or $appName -match "Github" ) {
+If ($appName -match "Azure" -or $appName -match "Github" -or $appName -match "EPM" ) {
     $login = Login-Azure -UserName $strUserName -Password $strPwd -AppName $appName  
 } Else {
     $login = Login-Default -UserName $strUserName -Password $strPwd -AppName $appName
 }
+
