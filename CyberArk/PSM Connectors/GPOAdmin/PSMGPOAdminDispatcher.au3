@@ -4,14 +4,16 @@ AutoItSetOption("WinTitleMatchMode", 2)
 
 #include <MsgBoxConstants.au3>
 #include "PSMGenericClientWrapper.au3"
+#include <GUIConstantsEx.au3>
+#include <WindowsConstants.au3>
 #include <AutoItConstants.au3>
 #include <BlockInputEx.au3>
 #include <CyberArkPSMAnimation.au3>
 
 ;============================================================
 ;             PSM-GPOAdmin
-;             -------------
-; Created : FEB - 2025
+;             -------------------------
+; Created : SEP - 2025
 ; Created By: Abhishek Singh
 ; This is intended to work with Quest GPOAdmin (all versions)
 ;
@@ -21,9 +23,10 @@ AutoItSetOption("WinTitleMatchMode", 2)
 ;=======================================
 ; Consts & Globals
 ;=======================================
-
+Global $Selection_Title, $Default_Selection, $App_Selections, $hGUI, $idComboBox, $g_pApp
+Global $Width = 400
 Global $DISPATCHER_NAME		
-Global $TargetUsername, $TargetPassword, $TargetDomain, $AppName
+Global $TargetUsername, $TargetPassword, $TargetDomain
 Global $WinTitle, $WinText, $hMsg
 Global $iPID = 0, $ConnectionClientPID = 0, $Debug = "N"
 Global $LOG_MESSAGE_PREFIX, $ERROR_MESSAGE_TITLE
@@ -46,6 +49,7 @@ Func Main()
 	If (PSMGenericClient_MapTSDrives() <> $PSM_ERROR_SUCCESS) Then Error(PSMGenericClient_PSMGetLastErrorString())
 
 	FetchSessionProperties() ; -----> Get the dispatcher parameters
+	SelectApplication() ; ------> Select application to access through GUI combobox
 	
 	If Not IsTrue($Debug) Then Start_Animation("Progress") ; Replace with Start_Animation("CyberArk") for alternate animation
 	LogWrite("Starting progress animation")
@@ -86,10 +90,30 @@ EndFunc
 Func FetchSessionProperties()
    GetSessionProperty("Username", $TargetUsername)
    GetSessionProperty("Password", $TargetPassword)
-   GetSessionProperty("PSMRemoteMachine", $AppName)
+   GetSessionProperty("Selection_Title", $Selection_Title)
+   GetSessionProperty("Default_Selection", $Default_Selection)
+   GetSessionProperty("App_Selections", $App_Selections)
    GetSessionProperty("LogonDomain", $TargetDomain)
    GetSessionProperty("DISPATCHER_NAME", $DISPATCHER_NAME)
    GetSessionProperty("DEBUG", $Debug, "N")
+EndFunc
+
+Func SelectApplication() ; --------------> Creates AutoIT GUI combox
+
+	$hGUI = GUICreate($Selection_Title, $Width, 40)
+	$idComboBox = GUICtrlCreateCombo($Default_Selection, 10, 10, $Width-25, 40)
+	GUICtrlSetData($idComboBox, $App_Selections)
+	GUISetState(@SW_SHOW, $hGUI)
+	$g_pApp = ""
+    While 1
+        Switch GUIGetMsg()
+            Case $idComboBox
+				$g_pApp = GUICtrlRead($idComboBox)
+			ExitLoop
+		EndSwitch
+    WEnd
+    GUIDelete($hGUI)
+
 EndFunc
 
 Func LoginProcess() ; --------------> Uses control commands to login to client
@@ -117,8 +141,8 @@ Func LoginProcess() ; --------------> Uses control commands to login to client
 	$WinText = ""
 	
 	For $i = 0 To UBound($Apps) - 1
-		If $Apps[$i][0] = $AppName Then
-			LogWrite("Launching selected application: " & $AppName & " with LogonFlag = " & $Apps[$i][2])
+		If $Apps[$i][0] = $g_pApp Then
+			LogWrite("Launching selected application: " & $g_pApp & " with LogonFlag = " & $Apps[$i][2])
 			$iPID = RunAs($TargetUsername, $TargetDomain, $TargetPassword, $Apps[$i][2], $Apps[$i][1], @SystemDir, @SW_MAXIMIZE)
 			$WinTitle = $Apps[$i][3]
 			$bLaunched = True
