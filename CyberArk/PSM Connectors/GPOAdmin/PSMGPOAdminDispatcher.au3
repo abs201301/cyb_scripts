@@ -12,7 +12,7 @@ AutoItSetOption("WinTitleMatchMode", 2)
 
 ;============================================================
 ;             PSM-GPOAdmin
-;             -------------------------
+;             -------------
 ; Created : SEP - 2025
 ; Created By: Abhishek Singh
 ; This is intended to work with Quest GPOAdmin (all versions)
@@ -100,15 +100,26 @@ EndFunc
 
 Func SelectApplication() ; --------------> Creates AutoIT GUI combox
 
-	$hGUI = GUICreate($Selection_Title, $Width, 40)
-	$idComboBox = GUICtrlCreateCombo($Default_Selection, 10, 10, $Width-25, 40)
-	GUICtrlSetData($idComboBox, $App_Selections)
+	$hGUI = GUICreate($Selection_Title, $Width, 90)
+	$idComboBox = GUICtrlCreateCombo($Default_Selection, 10, 10, $Width-25, 25)
+	GUICtrlSetData($idComboBox, $App_Selections & "|Exit")
+	Local $idOK = GUICtrlCreateButton("OK", ($Width / 2) - 30, 50, 60, 25)
 	GUISetState(@SW_SHOW, $hGUI)
 	$g_pApp = ""
     While 1
-        Switch GUIGetMsg()
-            Case $idComboBox
+		Local $nMsg = GUIGetMsg()
+        Switch $nMsg
+			Case $GUI_EVENT_CLOSE
+				ExitScript("User closed the window")
+            Case $idOK
 				$g_pApp = GUICtrlRead($idComboBox)
+				If $g_pApp = "" Or $g_pApp = $Default_Selection Then
+					MsgBox($MB_ICONWARNING, "Selection Required", "Please choose an option before continuing.")
+					ContinueLoop
+				EndIf
+				If $g_pApp = "Exit" Then
+					ExitScript("User selected Exit")
+				EndIf
 			ExitLoop
 		EndSwitch
     WEnd
@@ -210,4 +221,12 @@ Func IsTrue($var)
        Return False
    EndIf
    Return False
+EndFunc
+
+Func ExitScript($reason)
+   LogWrite("Dispatcher terminated: " & $reason)
+   If (PSMGenericClient_IsInitialized()) Then
+       PSMGenericClient_Term()
+   EndIf
+   Exit
 EndFunc
