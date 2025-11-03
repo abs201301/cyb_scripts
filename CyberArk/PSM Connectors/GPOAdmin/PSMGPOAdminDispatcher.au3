@@ -12,18 +12,20 @@ AutoItSetOption("WinTitleMatchMode", 2)
 
 ;============================================================
 ;             PSM-GPOAdmin
-;             -------------
+;             ------------------------
 ; Created : SEP - 2025
+; Updated : NOV - 2025
 ; Created By: Abhishek Singh
-; This is intended to work with Quest GPOAdmin (all versions)
-;
+; Used for launching:
+; 					> Quest GPOAdmin Client
+;                   > Microsoft GPMC
 ;============================================================
 
 
 ;=======================================
 ; Consts & Globals
 ;=======================================
-Global $Selection_Title, $Default_Selection, $App_Selections, $hGUI, $idComboBox, $g_pApp
+Global $Selection_Title, $Default_Selection, $App_Selections, $hGUI, $idComboBox, $g_pApp, $ServerA, $ServerB
 Global $Width = 400
 Global $DISPATCHER_NAME		
 Global $TargetUsername, $TargetPassword, $TargetDomain
@@ -94,6 +96,8 @@ Func FetchSessionProperties()
    GetSessionProperty("Default_Selection", $Default_Selection)
    GetSessionProperty("App_Selections", $App_Selections)
    GetSessionProperty("LogonDomain", $TargetDomain)
+   GetSessionProperty("Server1", $ServerA)
+   GetSessionProperty("Server2", $ServerB)
    GetSessionProperty("DISPATCHER_NAME", $DISPATCHER_NAME)
    GetSessionProperty("DEBUG", $Debug, "N")
 EndFunc
@@ -153,6 +157,10 @@ Func LoginProcess() ; --------------> Uses control commands to login to client
 	
 	For $i = 0 To UBound($Apps) - 1
 		If $Apps[$i][0] = $g_pApp Then
+			If $g_pApp = "GPOADmin" Then
+				LogWrite("Configuring GPOAdmin server registry keys before launch")
+				Add_GPOAdmin_Servers()
+			EndIf
 			LogWrite("Launching selected application: " & $g_pApp & " with LogonFlag = " & $Apps[$i][2])
 			$iPID = RunAs($TargetUsername, $TargetDomain, $TargetPassword, $Apps[$i][2], $Apps[$i][1], @SystemDir, @SW_MAXIMIZE)
 			$WinTitle = $Apps[$i][3]
@@ -163,7 +171,7 @@ Func LoginProcess() ; --------------> Uses control commands to login to client
 
 	If Not $bLaunched Or $iPID = 0 Then
 		Error(StringFormat("Failed to execute process [%s] for AppName [%s] - @error=%d", _
-           $Apps[$i][1], $AppName, @error))
+           $Apps[$i][1], $g_pApp, @error))
 	EndIf
 	LogWrite("Waiting for window with title: " & $WinTitle)
 	$hMsg = WinWait($WinTitle, $WinText, 20)
@@ -178,6 +186,23 @@ Func LoginProcess() ; --------------> Uses control commands to login to client
 
 EndFunc
 
+Func Add_GPOAdmin_Servers()
+   Local $sBaseKey = "HKCU\Software\Quest\GPOADmin\Servers"
+   Local $aServers[2][2] = [ _
+       [$ServerA, "40200"], _
+       [$ServerB, "40200"] _
+   ]
+   For $i = 0 To UBound($aServers) - 1
+       Local $sServer = $aServers[$i][0]
+       Local $iPort   = Number($aServers[$i][1])
+       RegWrite($sBaseKey, $sServer, "REG_DWORD", $iPort)
+       If @error Then
+           LogWrite("Failed to write registry entry for server: " & $sServer, $LOG_LEVEL_ERROR)
+       Else
+           LogWrite("Registered GPOAdmin server: " & $sServer & ":" & $iPort)
+       EndIf
+   Next
+EndFunc
 ;==============================
 ; Internal PSM utilities
 ;==============================
