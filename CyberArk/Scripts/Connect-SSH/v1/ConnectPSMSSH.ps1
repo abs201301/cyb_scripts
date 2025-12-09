@@ -8,7 +8,7 @@ function Get-SAMLResponse {
    $form.Width = 800
    $form.Height = 600
    $form.Text = "SAML Authentication"
-   # Initialize Edge WebView
+   # Initialize Winforms
    $webView = New-Object Windows.Forms.WebBrowser
    $webView.Dock = 'Fill'
    $webView.ScriptErrorsSuppressed = $true
