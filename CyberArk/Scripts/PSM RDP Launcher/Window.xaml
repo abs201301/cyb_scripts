@@ -1,0 +1,37 @@
+<Window
+   xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+   xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+   Title="PSM RDP Launcher" Height="720" Width="900"
+   WindowStartupLocation="CenterScreen"
+   ResizeMode="CanResize">
+<Grid Margin="10">
+<Grid.RowDefinitions>
+<RowDefinition Height="Auto"/>
+<RowDefinition Height="*"/>
+<RowDefinition Height="Auto"/>
+</Grid.RowDefinitions>
+<StackPanel Grid.Row="0" Orientation="Horizontal" Margin="0,0,0,10" VerticalAlignment="Center">
+<Label Content="Connection component:" Width="150" VerticalAlignment="Center"/>
+<ComboBox Name="ComboComp" Width="200" Margin="0,0,10,0" />
+<Label Content="Credential:" Width="80" VerticalAlignment="Center"/>
+<ComboBox Name="ComboCred" Width="220" Margin="0,0,10,0"/>
+<Button Name="BtnAddCred" Content="Add Cred" Width="80" Margin="0,0,5,0"/>
+<Button Name="BtnRemoveCred" Content="Remove" Width="80"/>
+</StackPanel>
+<Border Grid.Row="1" BorderBrush="Gray" BorderThickness="1" CornerRadius="2">
+<ScrollViewer VerticalScrollBarVisibility="Auto">
+<TreeView Name="TreeServers" Margin="6"/>
+</ScrollViewer>
+</Border>
+<StackPanel Grid.Row="2" Orientation="Horizontal" Margin="0,10,0,0" VerticalAlignment="Center">
+<Button Name="BtnCheckAll"     Content="Check All" Width="100"/>
+<Button Name="BtnUncheckAll"   Content="Uncheck All" Width="110" Margin="10,0,0,0"/>
+<Button Name="BtnReload"       Content="Reload JSON" Width="120" Margin="10,0,0,0"/>
+<Button Name="BtnLaunch" Content="OK - Launch Selected"
+                   Width="180" Margin="30,0,0,0"/>
+<Button Name="BtnClose" Content="Close"
+                   Width="100" Margin="10,0,0,0"/>
+<Label Name="LblStatus" Width="360" Margin="20,0,0,0" VerticalAlignment="Center"/>
+</StackPanel>
+</Grid>
+</Window>
