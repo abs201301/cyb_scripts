@@ -63,7 +63,10 @@ function Add-Credential {
    $txtPass = $window.FindName("TxtPass")
    $btnOK   = $window.FindName("BtnOK")
    $btnCancel = $window.FindName("BtnCancel")
-   $result = $null
+
+   $txtName.Text = "PSM-$username".ToUpper()
+   $txtUser.Text = $username.ToUpper()
+
    $btnOK.Add_Click({
        if ([string]::IsNullOrWhiteSpace($txtName.Text)) {
            [System.Windows.MessageBox]::Show("Name cannot be empty.","Error",[System.Windows.MessageBoxButton]::OK,[System.Windows.MessageBoxImage]::Error) | Out-Null
@@ -193,43 +196,41 @@ function New-TreeNode {
    $tvi = New-Object System.Windows.Controls.TreeViewItem
    $tvi.Header = $stack
    $tvi.Tag = $tagObj
-   $chk.Add_Checked({
-       Propagate-CheckedState $tvi $true
-       Update-ParentState $tvi
-   })
-   $chk.Add_Unchecked({
-       Propagate-CheckedState $tvi $false
-       Update-ParentState $tvi
-   })
+   $chk.Add_Checked({ Update-Children $tvi $true; Update-Parent $tvi })
+   $chk.Add_Unchecked({ Update-Children $tvi $false; Update-Parent $tvi })
    return $tvi
 }
-function Propagate-CheckedState {
+
+function Update-Children {
    param($treeItem, [bool]$state)
-   $header = $treeItem.Header
-   if ($header -and $header.Children.Count -gt 0) {
-       $cb = $header.Children[0]
+   if ($treeItem.Header -and $treeItem.Header.Children.Count -gt 0) {
+       $cb = $treeItem.Header.Children[0]
        if ($cb -is [System.Windows.Controls.CheckBox]) { $cb.IsChecked = $state }
    }
    foreach ($child in $treeItem.Items) {
-       Propagate-CheckedState $child $state
+       Update-Children $child $state
    }
 }
-function Update-ParentState {
+
+function Update-Parent {
    param($treeItem)
    $parent = $treeItem.Parent
    while ($parent -and ($parent -isnot [System.Windows.Controls.TreeView])) {
-       $anyChecked = $false; $anyUnchecked = $false
-       foreach ($c in $parent.Items) {
-           $h = $c.Header
-           if ($h -and $h.Children.Count -gt 0) {
-               $cb = $h.Children[0]
-               if ($cb.IsChecked) { $anyChecked = $true } else { $anyUnchecked = $true }
+       $allChecked = $true
+       $allUnchecked = $true
+       foreach ($child in $parent.Items) {
+           if ($child.Header -and $child.Header.Children.Count -gt 0) {
+               $cb = $child.Header.Children[0]
+               if ($cb.IsChecked -eq $true) { $allUnchecked = $false }
+               elseif ($cb.IsChecked -eq $false) { $allChecked = $false }
+               else { $allChecked = $allUnchecked = $false }
            }
        }
-       $ph = $parent.Header
-       if ($ph -and $ph.Children.Count -gt 0) {
-           $pcb = $ph.Children[0]
-           if ($anyChecked) { $pcb.IsChecked = $true } else { $pcb.IsChecked = $false }
+       if ($parent.Header -and $parent.Header.Children.Count -gt 0) {
+           $pcb = $parent.Header.Children[0]
+           if ($allChecked) { $pcb.IsChecked = $true }
+           elseif ($allUnchecked) { $pcb.IsChecked = $false }
+           else { $pcb.IsChecked = $null }
        }
        $parent = $parent.Parent
    }
@@ -358,8 +359,8 @@ $BtnRemoveCred.Add_Click({
  }
 })
 
-$BtnCheckAll.Add_Click({ foreach ($t in $Tree.Items) { Propagate-CheckedState $t $true }})
-$BtnUncheckAll.Add_Click({ foreach ($t in $Tree.Items) { Propagate-CheckedState $t $false }})
+$BtnCheckAll.Add_Click({ foreach ($t in $Tree.Items) { Update-Children $t $true }})
+$BtnUncheckAll.Add_Click({ foreach ($t in $Tree.Items) { Update-Children $t $false }})
 $BtnReload.Add_Click({
   try {
       $jsonData = Get-Content -Raw -Path $jsonPath | ConvertFrom-Json
