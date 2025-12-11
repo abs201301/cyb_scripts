@@ -148,7 +148,7 @@ Func LoginProcess() ; --------------> Uses control commands to login to client
 	
 	Local $Apps[2][4] = [ _
 		["GPMC", '"' & @SystemDir & '\mmc.exe" "C:\Windows\System32\gpmc.msc"', 1, "[CLASS:MMCMainFrame]"], _
-		["GPOADmin", '"' & @SystemDir & '\mmc.exe" "C:\Program Files\Quest\GPOADmin\GPOADmin.msc"', 2, "GPOADmin"] _
+		["GPOADmin", '"' & @SystemDir & '\mmc.exe" "C:\Program Files\Quest\GPOADmin\GPOADmin.msc"', 1, "GPOADmin"] _
 	]
 	
 	Local $bLaunched = False
