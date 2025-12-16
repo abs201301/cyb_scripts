@@ -4,7 +4,8 @@ function Get-MFAKey {
    try {
        Write-Host "Fetching new SSH key from CyberArk..."
        $psi = New-Object System.Diagnostics.ProcessStartInfo
-       $psi.FileName = "python.exe"
+       # Set the Environment variable for embedded python.exe
+       $psi.FileName = "$env:Embedded_Python"
        $psi.Arguments = "GetSAMLResponse.py $Idp_Url"
        $psi.RedirectStandardOutput = $true
        $psi.RedirectStandardError = $true
